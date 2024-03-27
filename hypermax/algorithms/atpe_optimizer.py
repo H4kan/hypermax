@@ -465,6 +465,22 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
 
             return primaryParameters + otherParameters, secondaryParameters, correlations
 
+        def computeClusteredPrimarySecondary():
+            if len(results) < initializationRounds:
+                return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
+
+            if len(set(result['loss'] for result in results)) < 5:
+                return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
+
+            numberParameters = [parameter for parameter in parameters if parameter.config['type'] == 'number']
+            otherParameters = [parameter for parameter in parameters if parameter.config['type'] != 'number']
+
+            primaryParameters = []
+            secondaryParameters = []
+
+            return primaryParameters + otherParameters, secondaryParameters, []
+
+
         if len([result['loss'] for result in results if result['loss'] is not None]) == 0:
             maxLoss = 1
         else:
