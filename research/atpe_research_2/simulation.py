@@ -719,8 +719,8 @@ class AlgorithmSimulation:
                                     else:
                                         lockedValues[secondary['name']] = random.uniform(0.0, 1.0)
 
-                if atpeParams['clustersNumber'] is not None:
-                    n_clusters = atpeParams['clustersNumber']
+                if atpeParams['resultFilteringMode']['filtering'] == 'cluster':
+                    n_clusters = atpeParams['resultFilteringMode']['clusters']
 
                     shuffled_results = results.copy()
                     random.shuffle(shuffled_results)
@@ -752,15 +752,15 @@ class AlgorithmSimulation:
                             filteredResults.append(result)
                         else:
                             removedResults.append(result)
-                    elif atpeParams['resultFilteringMode'] == 'cluster':
+                    elif atpeParams['resultFilteringMode']['filtering'] == 'cluster':
                         if not selected_in_cluster[labels[shuffled_results[resultIndex]]]:
                             filteredResults.append(shuffled_results[resultIndex])
                             selected_in_cluster[labels[shuffled_results[resultIndex]]] = True
                         else:
                             removedResults.append(shuffled_results[resultIndex])
-                    elif atpeParams['resultFilteringMode'] == 'skewness':
+                    elif atpeParams['resultFilteringMode']['filtering'] == 'skewness':
                         skewness = self.compute_skewness(result['loss'])
-                        if math.abs(skewness) <= atpeParams['skewnessThreshold']:
+                        if math.abs(skewness) <= atpeParams['resultFilteringMode']['skewness']:
                             filteredResults.append(result)
                         else:
                             removedResults.append(result)
