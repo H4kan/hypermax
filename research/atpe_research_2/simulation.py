@@ -24,6 +24,7 @@ from hypermax.hyperparameter import Hyperparameter
 from pprint import pprint
 import psutil
 import lightgbm as lgb
+from sklearn.cluster import KMeans
 
 default_max_workers = int(math.ceil(psutil.cpu_count()*1.15))
 
@@ -547,6 +548,14 @@ class AlgorithmSimulation:
                 {
                     "filtering": "loss_rank",
                     "multiplier": hyperopt.hp.quniform("resultFilteringLossRankMultiplier", 1.0, 4.0, 1.0)
+                },
+                {
+                    "filtering": "cluster",
+                    "clusters": hyperopt.hp.quniformint("clustersNumber", 2, 50)
+                },
+                {
+                    "filtering": "skewness",
+                    "skewness": hyperopt.hp.quniform("skewnessThreshold", 0.2, 0.8, 0.15)
                 }
             ])
         }
@@ -565,7 +574,9 @@ class AlgorithmSimulation:
             "resultFilteringMode": params['resultFilteringMode']['filtering'],
             "resultFilteringRandomProbability": params['resultFilteringMode']['probability'] if params['resultFilteringMode']['filtering'] == 'random' else None,
             "resultFilteringAgeMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'age' else None,
-            "resultFilteringLossRankMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'loss_rank' else None
+            "resultFilteringLossRankMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'loss_rank' else None,
+            "clustersNumber": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
+            "skewnessThreshold": params['resultFilteringMode']['skewness'] if params['resultFilteringMode']['filtering'] == 'skewness' else None,
         }
 
     def runSearch(self, currentResults, trials=10, atpeParams=None):
@@ -708,6 +719,18 @@ class AlgorithmSimulation:
                                     else:
                                         lockedValues[secondary['name']] = random.uniform(0.0, 1.0)
 
+                if atpeParams['clustersNumber'] is not None:
+                    n_clusters = atpeParams['clustersNumber']
+
+                    shuffled_results = results.copy()
+                    random.shuffle(shuffled_results)
+                    numeric_features = [self.extract_numeric_features(obj) for obj in shuffled_results]
+                
+                    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(numeric_features)
+                    labels = kmeans.labels_
+
+                    selected_in_cluster = {i: False for i in range(n_clusters)}
+
                 # Now last step, we filter results prior to sending them into ATPE
                 for resultIndex, result in enumerate(currentResults):
                     if atpeParams['resultFilteringMode']['filtering'] == 'none':
@@ -729,6 +752,19 @@ class AlgorithmSimulation:
                             filteredResults.append(result)
                         else:
                             removedResults.append(result)
+                    elif atpeParams['resultFilteringMode'] == 'cluster':
+                        if not selected_in_cluster[labels[shuffled_results[resultIndex]]]:
+                            filteredResults.append(shuffled_results[resultIndex])
+                            selected_in_cluster[labels[shuffled_results[resultIndex]]] = True
+                        else:
+                            removedResults.append(shuffled_results[resultIndex])
+                    elif atpeParams['resultFilteringMode'] == 'skewness':
+                        skewness = self.compute_skewness(result['loss'])
+                        if math.abs(skewness) <= atpeParams['skewnessThreshold']:
+                            filteredResults.append(result)
+                        else:
+                            removedResults.append(result)
+
 
             # If we are in initialization, or by some other fluke of random nature that we end up with no results after filtering,
             # then just use all the results
@@ -779,6 +815,12 @@ class AlgorithmSimulation:
                 best = data
                 bestLoss = loss
         return best, newResults
+
+    def extract_numeric_features(obj_dict):
+        return [value for key, value in obj_dict.items() if isinstance(value, (int, float))]
+    
+    def compute_skewness(values):
+        return float(numpy.skew(values))
 
     def computeCardinality(self):
         if self.log10_cardinality: # Return cached computation

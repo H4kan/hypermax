@@ -21,6 +21,8 @@ atpeParameterKeys = [
     'resultFilteringLossRankMultiplier',
     'resultFilteringMode',
     'resultFilteringRandomProbability',
+    'clustersNumber',
+    'skewnessThreshold',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
     'secondaryCutoff',
@@ -39,6 +41,8 @@ predictorKeyCascadeOrdering = [
     'resultFilteringAgeMultiplier',
     'resultFilteringLossRankMultiplier',
     'resultFilteringRandomProbability',
+    'clustersNumber',
+    'skewnessThreshold',
     'secondaryTopLockingPercentile',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
@@ -55,6 +59,8 @@ atpeParameterPredictionStandardDeviationRatio = {
     'resultFilteringAgeMultiplier': 1.0,
     'resultFilteringLossRankMultiplier': 1.0,
     'resultFilteringRandomProbability': 1.0,
+    'clustersNumber': 1.0,
+    'skewnessThreshold': 1.0,
     'secondaryCorrelationExponent': 1.0,
     'secondaryCorrelationMultiplier': 1.0,
     'secondaryCutoff': 0.9,
@@ -82,13 +88,13 @@ classPredictorKeys = [
 ]
 
 numPredictorClasses = {
-    'resultFilteringMode': 4,
+    'resultFilteringMode': 6,
     'secondaryLockingMode': 2,
     'secondaryProbabilityMode': 2
 }
 
 atpeParameterValues = {
-    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random'],
+    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random', 'cluster', 'skewness'],
     'secondaryLockingMode': ['random', 'top'],
     'secondaryProbabilityMode': ['correlation', 'fixed']
 }
