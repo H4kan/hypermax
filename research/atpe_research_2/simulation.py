@@ -1225,7 +1225,7 @@ def computeStats(algo):
     algo.computeLoss = None
     return (stats, algo)
 
-def chooseAlgorithmsForTest(total, shrinkage=0.1, processExecutor=None):
+def chooseAlgorithmsForTest(total, shrinkage=1.0, processExecutor=None):
     parameterSpacesToConsider = int(math.ceil(float(total) / shrinkage))
     numberFinalParameterSpaces = total
 
