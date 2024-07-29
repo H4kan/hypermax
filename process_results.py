@@ -21,8 +21,8 @@ atpeParameterKeys = [
     'resultFilteringLossRankMultiplier',
     'resultFilteringMode',
     'resultFilteringRandomProbability',
-    'clustersNumber',
-    'skewnessThreshold',
+    'clustersQuantile',
+    'zscoreThreshold',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
     'secondaryCutoff',
@@ -41,8 +41,8 @@ predictorKeyCascadeOrdering = [
     'resultFilteringAgeMultiplier',
     'resultFilteringLossRankMultiplier',
     'resultFilteringRandomProbability',
-    'clustersNumber',
-    'skewnessThreshold',
+    'clustersQuantile',
+    'zscoreThreshold',
     'secondaryTopLockingPercentile',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
@@ -59,8 +59,8 @@ atpeParameterPredictionStandardDeviationRatio = {
     'resultFilteringAgeMultiplier': 1.0,
     'resultFilteringLossRankMultiplier': 1.0,
     'resultFilteringRandomProbability': 1.0,
-    'clustersNumber': 1.0,
-    'skewnessThreshold': 1.0,
+    'clustersQuantile': 1.0,
+    'zscoreThreshold': 1.0,
     'secondaryCorrelationExponent': 1.0,
     'secondaryCorrelationMultiplier': 1.0,
     'secondaryCutoff': 0.9,
@@ -94,7 +94,7 @@ numPredictorClasses = {
 }
 
 atpeParameterValues = {
-    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random', 'cluster', 'skewness'],
+    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random', 'cluster', 'zscore'],
     'secondaryLockingMode': ['random', 'top'],
     'secondaryProbabilityMode': ['correlation', 'fixed']
 }
@@ -291,21 +291,15 @@ def extractResultsFromLogs():
 
 
 def extractResultsFromCSVs():
-    # This file merges together all the results
-    dirs = sorted(os.listdir('.'))
 
     allResults = []
-
-    for dir in dirs:
-        if 'run' not in dir:
-            continue
-        filePath = os.path.join(dir, 'hypermax', 'results.csv')
-        if os.path.exists(filePath):
-            with open(filePath, 'rt') as file:
-                results = [dict(result) for result in csv.DictReader(file)]
-                for result in results:
-                    result['run'] = dir
-                allResults = allResults + [preprocessResult(result) for result in results]
+    filePath = os.path.join('results.csv')
+    if os.path.exists(filePath):
+        with open(filePath, 'rt') as file:
+            results = [dict(result) for result in csv.DictReader(file)]
+            for result in results:
+                result['run'] = filePath
+            allResults = allResults + [preprocessResult(result) for result in results]
     return allResults
 
 
@@ -472,13 +466,14 @@ def mergeResults():
                 vectors.append([result[feature]])
 
         vectors = numpy.array(vectors)
+
         # Use percentiles to focus our scaler on the most common values, making it more immune to the weird outliers in our dataset
         percentile20 = numpy.percentile(vectors[:,0], q=20)
         percentile80 = numpy.percentile(vectors[:,0], q=80)
-        vectors = [vector for vector in vectors if vector[0] > percentile20 and vector[0] < percentile80]
+        vectors = [vector for vector in vectors if vector[0] >= percentile20 and vector[0] <= percentile80]
 
-        scaler = sklearn.preprocessing.StandardScaler(vectors)
-        scaler.fit(vectors)
+        scaler = sklearn.preprocessing.StandardScaler()
+        scaler.fit_transform(vectors)
 
         scalers[feature] = {
             'scales': scaler.scale_.tolist(),
@@ -604,6 +599,9 @@ def trainATPEModels():
                     targets.append(allTargets.index(result[key]))
                 else:
                     targets.append(float(result[key]))
+
+        if numpy.array(vectors).shape[0] == 0 or numpy.array(targets).shape[0] == 0:
+            print(f"No valid data for {key} after filtering.")
         return lightgbm.Dataset(numpy.array(vectors), label=numpy.array(targets), feature_name=names)
 
 
@@ -635,9 +633,11 @@ def trainATPEModels():
             params['objective'] = 'regression_l2'
             params['metric'] = 'l2'
 
-        model = lightgbm.train(params, trainingData, valid_sets=[testingData], verbose_eval=False)
+        params['verbose'] = -1
 
-        model.save_model("model-" + key + ".txt")
+        model = lightgbm.train(params, trainingData, valid_sets=[testingData])
+
+        model.save_model("models/model-" + key + ".txt")
 
         if key not in classPredictorKeys:
             # Now we determine the "adjustment factor". Because these models are trained on an extremely noisy data set,
@@ -670,7 +670,7 @@ def trainATPEModels():
 
             origStddev = origStddev * atpeParameterPredictionStandardDeviationRatio[key]
 
-            with open('model-' + key + "-configuration.json", 'wt') as file:
+            with open('models/model-' + key + "-configuration.json", 'wt') as file:
                 json.dump({
                     "origStddev": origStddev,
                     "origMean": origMean,
@@ -679,6 +679,8 @@ def trainATPEModels():
                 }, file)
 
             def renormalize(value):
+                if predStddev == 0:
+                    print("xd")
                 return (((value - predMean) / predStddev) * origStddev) + origMean
 
             totalL1Error = 0
@@ -757,7 +759,7 @@ def trainATPEModels():
                 predMeans[value] = predMean
                 predStddevs[value] = predStddev
 
-            with open('model-' + key + "-configuration.json", 'wt') as file:
+            with open('models/model-' + key + "-configuration.json", 'wt') as file:
                 json.dump({
                     "origStddevs": origStddevs,
                     "origMeans": origMeans,

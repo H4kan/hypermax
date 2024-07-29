@@ -25,6 +25,8 @@ from pprint import pprint
 import psutil
 import lightgbm as lgb
 from sklearn.cluster import KMeans
+from scipy.stats import zscore
+
 
 default_max_workers = int(math.ceil(psutil.cpu_count()*1.15))
 
@@ -551,11 +553,11 @@ class AlgorithmSimulation:
                 },
                 {
                     "filtering": "cluster",
-                    "clusters": hyperopt.hp.quniformint("clustersNumber", 2, 50)
+                    "clusters": hyperopt.hp.quniform("clustersQuantile", 0.4, 0.9, 0.1)
                 },
                 {
-                    "filtering": "skewness",
-                    "skewness": hyperopt.hp.quniform("skewnessThreshold", 0.2, 0.8, 0.15)
+                    "filtering": "zscore",
+                    "zscore": hyperopt.hp.quniform("zscoreThreshold", -3.0, 3.0, 0.25)
                 }
             ])
         }
@@ -575,8 +577,8 @@ class AlgorithmSimulation:
             "resultFilteringRandomProbability": params['resultFilteringMode']['probability'] if params['resultFilteringMode']['filtering'] == 'random' else None,
             "resultFilteringAgeMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'age' else None,
             "resultFilteringLossRankMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'loss_rank' else None,
-            "clustersNumber": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
-            "skewnessThreshold": params['resultFilteringMode']['skewness'] if params['resultFilteringMode']['filtering'] == 'skewness' else None,
+            "clustersQuantile": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
+            "zscoreThreshold": params['resultFilteringMode']['zscore'] if params['resultFilteringMode']['filtering'] == 'zscore' else None,
         }
 
     def runSearch(self, currentResults, trials=10, atpeParams=None):
@@ -720,16 +722,19 @@ class AlgorithmSimulation:
                                         lockedValues[secondary['name']] = random.uniform(0.0, 1.0)
 
                 if atpeParams['resultFilteringMode']['filtering'] == 'cluster':
-                    n_clusters = atpeParams['resultFilteringMode']['clusters']
+                    clusters_q = atpeParams['resultFilteringMode']['clusters']
+                    numeric_features = [self.extract_numeric_features(obj) for obj in currentResults]
 
-                    shuffled_results = results.copy()
-                    random.shuffle(shuffled_results)
-                    numeric_features = [self.extract_numeric_features(obj) for obj in shuffled_results]
-                
-                    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(numeric_features)
+                    n_clusters = int(round(clusters_q * len(currentResults)))
+
+                    kmeans = KMeans(n_clusters=int(n_clusters), random_state=0).fit(numeric_features)
                     labels = kmeans.labels_
+                    # print("Tried clustering with " + str(n_clusters) + " clusters")
+                    # print(labels)
+                    selected_in_cluster = {i: False for i in range(int(n_clusters))}
 
-                    selected_in_cluster = {i: False for i in range(n_clusters)}
+                if atpeParams['resultFilteringMode']['filtering'] == 'zscore':
+                    zscores = abs(zscore([result['loss'] for result in currentResults]))
 
                 # Now last step, we filter results prior to sending them into ATPE
                 for resultIndex, result in enumerate(currentResults):
@@ -753,17 +758,23 @@ class AlgorithmSimulation:
                         else:
                             removedResults.append(result)
                     elif atpeParams['resultFilteringMode']['filtering'] == 'cluster':
-                        if not selected_in_cluster[labels[shuffled_results[resultIndex]]]:
-                            filteredResults.append(shuffled_results[resultIndex])
-                            selected_in_cluster[labels[shuffled_results[resultIndex]]] = True
+                        if not selected_in_cluster[labels[resultIndex]]:
+                            filteredResults.append(result)
+                            selected_in_cluster[labels[resultIndex]] = True
                         else:
-                            removedResults.append(shuffled_results[resultIndex])
-                    elif atpeParams['resultFilteringMode']['filtering'] == 'skewness':
-                        skewness = self.compute_skewness(result['loss'])
-                        if math.abs(skewness) <= atpeParams['resultFilteringMode']['skewness']:
+                            removedResults.append(result)
+
+                    elif atpeParams['resultFilteringMode']['filtering'] == 'zscore':
+                        if (atpeParams['resultFilteringMode']['zscore'] < 0 and zscores[resultIndex] > abs(atpeParams['resultFilteringMode']['zscore'])) or (atpeParams['resultFilteringMode']['zscore'] > 0 and zscores[resultIndex] < 3 - atpeParams['resultFilteringMode']['zscore']):
                             filteredResults.append(result)
                         else:
                             removedResults.append(result)
+                    # elif atpeParams['resultFilteringMode']['filtering'] == 'zscore':
+                    #     skewness = self.compute_skewness(result['loss'])
+                    #     if abs(skewness) <= atpeParams['resultFilteringMode']['skewness']:
+                    #         filteredResults.append(result)
+                    #     else:
+                    #         removedResults.append(result)
 
 
             # If we are in initialization, or by some other fluke of random nature that we end up with no results after filtering,
@@ -800,7 +811,8 @@ class AlgorithmSimulation:
                           algo=functools.partial(hyperopt.tpe.suggest, n_startup_jobs=initializationRounds, gamma=atpeParams['gamma'], n_EI_candidates=int(atpeParams['nEICandidates'])),
                           max_evals=1,
                           trials=self.convertResultsToTrials(filteredResults),
-                          rstate=numpy.random.RandomState(seed=int(random.randint(1, 2 ** 32 - 1))))
+                          rstate=numpy.random.RandomState(seed=int(random.randint(1, 2 ** 32 - 1))),
+                          verbose=False)
 
             result = self.execute(nextParams)
             loss = result['loss']
@@ -816,11 +828,9 @@ class AlgorithmSimulation:
                 bestLoss = loss
         return best, newResults
 
-    def extract_numeric_features(obj_dict):
+    def extract_numeric_features(self, obj_dict):
         return [value for key, value in obj_dict.items() if isinstance(value, (int, float))]
-    
-    def compute_skewness(values):
-        return float(numpy.skew(values))
+
 
     def computeCardinality(self):
         if self.log10_cardinality: # Return cached computation
@@ -894,7 +904,7 @@ class AlgorithmSimulation:
 
     def computeOptimizationResults(self, number_histories=10, trial_lengths=None, atpeSearchLength = 1000, verbose=False, processExecutor=None):
         if trial_lengths is None:
-            trial_lengths = [10,10,10,10,10,10,10,10,10,25,25,25,25,25,25]
+            trial_lengths = [10,10,10,10,10,25,25]
 
         # Construct 10 different result histories. Each history will represent a different convergence speed, with different assumptions on how good our ATPE
         # parameters were at that point in the history
@@ -917,20 +927,20 @@ class AlgorithmSimulation:
                 allATPEParamResultFutures.append(processExecutor.submit(self.computeBestATPEParamsAtHistory, history, historyIndex, atpeSearchLength, length))
 
             allATPEParamResults = []
-            for future in concurrent.futures.as_completed(allATPEParamResultFutures):
+            for future in concurrent.futures.as_completed(allATPEParamResultFutures): 
                 stats, trialATPEParamResults = future.result()
                 allATPEParamResults = allATPEParamResults + trialATPEParamResults
                 optimizationResults.append(stats)
-                if verbose:
-                    pprint(stats)
-                    sys.stdout.flush()
-                    sys.stderr.flush()
+                # if verbose:
+                    # pprint(stats)
+                    # sys.stdout.flush()
+                    # sys.stderr.flush()
 
             # Now we extend each history by using ATPE parameters at various percentiles
             sortedATPEParamResults = sorted(allATPEParamResults, key=lambda result: result['loss'])
 
             for historyIndex, history in enumerate(histories):
-                percentile = (float(historyIndex+1) / float(len(histories))) * 0.5
+                percentile = (float(historyIndex+1) / float(len(histories))) * 0.5 
                 index = int(percentile * float(len(histories)))
                 atpeParamsForExtension = sortedATPEParamResults[index]['atpeParams']
                 # print(atpeParamsForExtension)
@@ -1204,7 +1214,7 @@ def createContributionChartExample(type=4):
 
     fig, ax = plt.subplots()
 
-    print(contribution['func'])
+    # print(contribution['func'])
     funcStore = {}
     exec("import math\nimport scipy.interpolate\nfunc = " + contribution['func'], funcStore)
     func = funcStore['func']
@@ -1237,7 +1247,7 @@ def chooseAlgorithmsForTest(total, shrinkage=1.0, processExecutor=None):
     results = []
     for n, future in enumerate(concurrent.futures.as_completed(resultFutures)):
         stats, algo = future.result()
-        fileName = 'algo' + str(n) + ".bin"
+        fileName = 'algos/algo' + str(n) + ".bin"
         stats['fileName'] = fileName
         with open(fileName, "wb") as file:
             algo.computeLoss = None
@@ -1289,8 +1299,8 @@ def chooseAlgorithmsForTest(total, shrinkage=1.0, processExecutor=None):
                 base = 2
             if 'top_30%' in stat in stat or 'recent_15%' in stat:
                 base = 1
-            if base is None:
-                print(stat)
+            # if base is None:
+            #     print(stat)
 
             if 'correlation' in stat:
                 base = base * 3
@@ -1370,7 +1380,7 @@ if __name__ == '__main__':
         with concurrent.futures.ProcessPoolExecutor(max_workers=default_max_workers) as processExecutor:
             resultFutures = []
 
-            chosen = chooseAlgorithmsForTest(total=250, processExecutor=processExecutor)
+            chosen = chooseAlgorithmsForTest(total=10, processExecutor=processExecutor)
             random.shuffle(chosen) # Shuffle them for extra randomness
             for index, algoInfo in enumerate(chosen):
                 with open(algoInfo['fileName'], "rb") as file:
@@ -1394,8 +1404,8 @@ if __name__ == '__main__':
                     writer.writeheader()
                     writer.writerows(results)
                 if verbose:
-                    pprint(algoResults)
-                    sys.stdout.flush()
+                    # pprint(algoResults)
+                    # sys.stdout.flush()
                     sys.stderr.flush()
                 else:
                     print("Completed Analysis for algorithm ", algoInfo['fileName'])
