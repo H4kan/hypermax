@@ -8,6 +8,9 @@ import sklearn.neighbors
 import random
 import pickle
 import lightgbm
+from catboost import Pool, CatBoostRegressor, CatBoostClassifier
+from sklearn.svm import SVC, SVR
+import joblib
 import numpy
 from pprint import pprint
 from simulation import AlgorithmSimulation
@@ -21,11 +24,14 @@ atpeParameterKeys = [
     'resultFilteringLossRankMultiplier',
     'resultFilteringMode',
     'resultFilteringRandomProbability',
-    'clustersQuantile',
+    # 'clustersQuantile',
     'zscoreThreshold',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
     'secondaryCutoff',
+    # 'secondaryAnovaExponent',
+    # 'secondaryAnovaMultiplier',
+    # 'secondaryCatCutoff',
     # 'secondarySorting',
     'secondaryFixedProbability',
     'secondaryLockingMode',
@@ -41,13 +47,16 @@ predictorKeyCascadeOrdering = [
     'resultFilteringAgeMultiplier',
     'resultFilteringLossRankMultiplier',
     'resultFilteringRandomProbability',
-    'clustersQuantile',
+    # 'clustersQuantile',
     'zscoreThreshold',
     'secondaryTopLockingPercentile',
     'secondaryCorrelationExponent',
     'secondaryCorrelationMultiplier',
+    # 'secondaryAnovaExponent',
+    # 'secondaryAnovaMultiplier',
     'secondaryFixedProbability',
     'secondaryCutoff',
+    # 'secondaryCatCutoff',
     'gamma',
     'nEICandidates'
 ]
@@ -59,11 +68,14 @@ atpeParameterPredictionStandardDeviationRatio = {
     'resultFilteringAgeMultiplier': 1.0,
     'resultFilteringLossRankMultiplier': 1.0,
     'resultFilteringRandomProbability': 1.0,
-    'clustersQuantile': 1.0,
+    # 'clustersQuantile': 1.0,
     'zscoreThreshold': 1.0,
     'secondaryCorrelationExponent': 1.0,
     'secondaryCorrelationMultiplier': 1.0,
     'secondaryCutoff': 0.9,
+    # 'secondaryAnovaExponent': 1.0,
+    # 'secondaryAnovaMultiplier': 1.0,
+    # 'secondaryCatCutoff': 0.9,
     'secondaryFixedProbability': 1.0,
     'secondaryTopLockingPercentile': 1.0,
     'resultFilteringMode': 2.2,
@@ -75,9 +87,14 @@ atpeParameterPredictionStandardDeviationRatio = {
 customLightGBMParams = {
     'secondaryCutoff': {
         'feature_fraction': 0.7 # Extra bagging required on these ones for good generalization, since they are late in the cycle and can fit to other atpe parameter predictions
+        # 'rsm': 0.7
     },
+    # 'secondaryCatCutoff': {
+    #     'feature_fraction': 0.7
+    # },
     'gamma': {
         'feature_fraction': 0.7 # Extra bagging required on these ones for good generalization, since they are late in the cycle and can fit to other atpe parameter predictions
+        # 'rsm': 0.7
     }
 }
 
@@ -88,13 +105,16 @@ classPredictorKeys = [
 ]
 
 numPredictorClasses = {
-    'resultFilteringMode': 6,
+    'resultFilteringMode': 5,
     'secondaryLockingMode': 2,
     'secondaryProbabilityMode': 2
 }
 
 atpeParameterValues = {
-    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random', 'cluster', 'zscore'],
+    'resultFilteringMode': ['age', 'loss_rank', 'none', 'random', 
+                            # 'cluster', 
+                            'zscore'
+                            ],
     'secondaryLockingMode': ['random', 'top'],
     'secondaryProbabilityMode': ['correlation', 'fixed']
 }
@@ -106,6 +126,7 @@ nonFeatureKeys = [
     'contributions_logarithmic',
     'contributions_peakvalley',
     'contributions_random',
+    'contributions_sigmoid',
     'fail_rate',
     'history',
     'interactions',
@@ -114,6 +135,7 @@ nonFeatureKeys = [
     'interactions_peakvalley',
     'interactions_random',
     'interactions_wave',
+    'interactions_hyperbolic',
     'loss',
     'noise',
     'run',
@@ -603,6 +625,11 @@ def trainATPEModels():
         if numpy.array(vectors).shape[0] == 0 or numpy.array(targets).shape[0] == 0:
             print(f"No valid data for {key} after filtering.")
         return lightgbm.Dataset(numpy.array(vectors), label=numpy.array(targets), feature_name=names)
+        # pool = Pool(data=numpy.array(vectors), label=numpy.array(targets), feature_names=names)
+        # this is for SVMs
+        # joblib.dump(pool.get_features(), "models/features-" + key + ".pkl")
+
+        # return pool
 
 
     allModels = []
@@ -611,7 +638,16 @@ def trainATPEModels():
         trainingData = createDataset(key, training, atpeParamFeatures=atpeParamFeatures)
         testingData = createDataset(key, testing, atpeParamFeatures=atpeParamFeatures)
 
-        allFeatureNames = trainingData.feature_name
+        names = copy.copy(featureKeys)
+        for atpeParamFeature in atpeParamFeatures:
+            if atpeParamFeature in atpeParameterValues:
+                for value in atpeParameterValues[atpeParamFeature]:
+                    names.append(atpeParamFeature + "_" + value)
+            else:
+                names.append(atpeParamFeature)
+
+        # allFeatureNames = trainingData.feature_name
+        allFeatureNames = names
 
         params = {
             'num_iterations': 100,
@@ -619,31 +655,58 @@ def trainATPEModels():
             "early_stopping_round": 5,
             "feature_fraction": 0.85,
             "learning_rate": 0.05
+
+            # ,'iterations': 100,
+            # "early_stopping_rounds": 5,
+            # 'eval_metric': 'RMSE',
+            # # 'rsm': 0.85
+            # 'kernel': 'rbf',  # Set the kernel to RBF
+            # 'gamma': 'auto'  # Set gamma to 'auto' to use 1/n_features
         }
 
         if key in customLightGBMParams:
             for param in customLightGBMParams[key]:
                 params[param] = customLightGBMParams[key][param]
 
+        # params['verbose'] = False
         if key in classPredictorKeys:
             params['num_class'] = numPredictorClasses[key]
             params['objective'] = 'multiclass'
             params['metric'] = 'multi_error'
+
+            # params['loss_function'] = 'MultiClass'
+            # params['eval_metric'] = 'MultiClass'
+            # model = CatBoostClassifier(**params)
+            # model = SVC(**params, probability=True) 
         else:
             params['objective'] = 'regression_l2'
             params['metric'] = 'l2'
+            
+            # params['loss_function'] = 'RMSE'
+            # params['eval_metric'] = 'RMSE'
+            # model = CatBoostRegressor(**params)
+            # model = SVR(**params)
 
         params['verbose'] = -1
-
+      
+        
+ # Pass your parameters here
+        # features = trainingData.get_features()
+        # labels = trainingData.get_label()
+        # print(key)
+        # print(features.shape)
+        # model.fit(features, labels)
+        # model.fit(trainingData, eval_set=testingData, use_best_model=True)
         model = lightgbm.train(params, trainingData, valid_sets=[testingData])
 
         model.save_model("models/model-" + key + ".txt")
+        # joblib.dump(model, "models/model-" + key + ".pkl")
 
         if key not in classPredictorKeys:
             # Now we determine the "adjustment factor". Because these models are trained on an extremely noisy data set,
             # We have to eliminate the central tendency that results from training on it, so that the outputs of our model
             # Take up the full range of possible ATPE parameter values
-            print(key)
+            # print(key)
             origStddev = numpy.std([float(result[key]) for result in training if result[key] is not None and result[key] != ''])
             origMean = numpy.mean([float(result[key]) for result in training if result[key] is not None and result[key] != ''])
 
@@ -664,7 +727,7 @@ def trainATPEModels():
                 vectors.append(vector)
 
             trainingPredicted = model.predict(numpy.array(vectors))
-
+            
             predStddev = numpy.std(trainingPredicted)
             predMean = numpy.mean(trainingPredicted)
 
@@ -680,7 +743,7 @@ def trainATPEModels():
 
             def renormalize(value):
                 if predStddev == 0:
-                    print("xd")
+                    return value
                 return (((value - predMean) / predStddev) * origStddev) + origMean
 
             totalL1Error = 0
@@ -748,6 +811,7 @@ def trainATPEModels():
                         vector.append(-3)  # We use -3 because none of our atpe parameters ever take this value, so it acts as our signal that this parameter is unfilled
                 vectors.append(vector)
 
+            # trainingPredicted = model.predict_proba(numpy.array(vectors))
             trainingPredicted = model.predict(numpy.array(vectors))
             trainingPredicted = numpy.array(trainingPredicted)
 
@@ -810,10 +874,11 @@ def trainATPEModels():
             print("Accuracy:", str(totalCorrect * 100 / totalCount), "%")
 
         importances = zip(allFeatureNames, model.feature_importance())
+        # importances = zip(allFeatureNames, model.get_feature_importance())
         importances = sorted(importances, key=lambda r:-r[1])
         print(key)
         for importance in importances:
             print("    ", importance[0], importance[1])
 
-# mergeResults()
+mergeResults()
 trainATPEModels()

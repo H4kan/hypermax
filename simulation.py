@@ -25,7 +25,7 @@ from pprint import pprint
 import psutil
 import lightgbm as lgb
 from sklearn.cluster import KMeans
-from scipy.stats import zscore
+from scipy.stats import zscore, f_oneway
 
 
 default_max_workers = int(math.ceil(psutil.cpu_count()*1.15))
@@ -44,12 +44,16 @@ class AlgorithmSimulation:
         self.computeLoss = None
         self.search = None
         self.interactionCounts = {}
-        self.interactionTypes = ['linear', 'peakvalley', 'wave', 'random']
+        self.interactionTypes = ['linear', 'peakvalley', 'wave', 'random'
+                                 , 'hyperbolic'
+                                 ]
         for n in self.interactionTypes:
             self.interactionCounts[n] = 0
 
         self.contributionCounts = {}
-        self.contributionTypes = ['linear', 'peakvalley', 'exponential', 'logarithmic', 'random']
+        self.contributionTypes = ['linear', 'peakvalley', 'exponential', 'logarithmic', 'random'
+                                  ,'sigmoid'
+                                  ]
         for n in self.contributionTypes:
             self.contributionCounts[n] = 0
 
@@ -185,6 +189,22 @@ class AlgorithmSimulation:
                 "weight": roundPrecision(square(random.uniform(0, 3))),
                 "group": group
             }
+        elif type == 'hyperbolic':
+            # Hyperbolic multiplication function
+            alpha_x = roundPrecision(random.uniform(0.5, 2.0))  # Skalowanie x
+            alpha_y = roundPrecision(random.uniform(0.5, 2.0))  # Skalowanie y
+            beta_x = roundPrecision(random.uniform(-1, 1))  # Przesunięcie x
+            beta_y = roundPrecision(random.uniform(-1, 1))  # Przesunięcie y
+            gamma = roundPrecision(random.uniform(0.5, 2.0))  # Skalowanie gamma
+
+            return {
+                "type": "hyperbolic",
+                "func": "lambda x, y: {0} * math.sinh({1} * x - {2}) * math.sinh({3} * y - {4}) / (1.0 + math.cosh(x * y))".format(gamma, alpha_x, beta_x, alpha_y, beta_y),
+                "param1": param1,
+                "param2": param2,
+                "weight": roundPrecision(square(random.uniform(0, 3))),
+                "group": group
+            }
 
     def createHyperParameterContribution(self, param, group, type=None):
         if type is None:
@@ -310,6 +330,27 @@ class AlgorithmSimulation:
                 "param": param,
                 "group": group
             }
+        elif type == 'sigmoid':
+            # Sigmoid
+            steepness = roundPrecision(random.uniform(1, 10))
+            midpoint = roundPrecision(random.uniform(0, 1))
+
+            invertY = random.choice([True, False])
+
+            if invertY:
+                return {
+                    "type": "sigmoid",
+                    "func": "lambda x: 1.0 / (1.0 + math.exp({0} * (x - {1})))".format(-steepness, midpoint),
+                    "param": param,
+                    "group": group
+                }
+            else:
+                return {
+                    "type": "sigmoid",
+                    "func": "lambda x: 1.0 / (1.0 + math.exp({0} * ({1} - x)))".format(steepness, midpoint),
+                    "param": param,
+                    "group": group
+                }
 
 
     def createSearchFunction(self):
@@ -516,6 +557,8 @@ class AlgorithmSimulation:
             "nEICandidates": hyperopt.hp.qloguniform("nEICandidates", math.log(2), math.log(48), 2),
             "secondaryCutoff": hyperopt.hp.quniform("secondaryCutoff", -1, 1, 0.1),
             "secondaryCorrelationExponent": hyperopt.hp.quniform("secondaryCorrelationExponent", 1, 3, 0.5),
+            # "secondaryCatCutoff": hyperopt.hp.quniform("secondaryCatCutoff", -1, 1, 0.1),
+            # "secondaryAnovaExponent": hyperopt.hp.quniform("secondaryAnovaExponent", 1, 3, 0.5),
             "secondaryProbabilityMode": hyperopt.hp.choice("secondaryProbabilityMode", [
                 {
                     "mode": "fixed",
@@ -523,7 +566,8 @@ class AlgorithmSimulation:
                 },
                 {
                     "mode": "correlation",
-                    "multiplier": hyperopt.hp.quniform("secondaryCorrelationMultiplier", 0.2, 1.8, 0.2)
+                    "multiplier": hyperopt.hp.quniform("secondaryCorrelationMultiplier", 0.2, 1.8, 0.2),
+                    # "anovaMultiplier": hyperopt.hp.quniform("secondaryAnovaMultiplier", 0.2, 1.8, 0.2),
                 }
             ]),
             "secondaryLockingMode": hyperopt.hp.choice("secondaryLockingMode", [
@@ -551,10 +595,10 @@ class AlgorithmSimulation:
                     "filtering": "loss_rank",
                     "multiplier": hyperopt.hp.quniform("resultFilteringLossRankMultiplier", 1.0, 4.0, 1.0)
                 },
-                {
-                    "filtering": "cluster",
-                    "clusters": hyperopt.hp.quniform("clustersQuantile", 0.4, 0.9, 0.1)
-                },
+                # {
+                #     "filtering": "cluster",
+                #     "clusters": hyperopt.hp.quniform("clustersQuantile", 0.4, 0.9, 0.1)
+                # },
                 {
                     "filtering": "zscore",
                     "zscore": hyperopt.hp.quniform("zscoreThreshold", -3.0, 3.0, 0.25)
@@ -577,8 +621,11 @@ class AlgorithmSimulation:
             "resultFilteringRandomProbability": params['resultFilteringMode']['probability'] if params['resultFilteringMode']['filtering'] == 'random' else None,
             "resultFilteringAgeMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'age' else None,
             "resultFilteringLossRankMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'loss_rank' else None,
-            "clustersQuantile": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
+            # "clustersQuantile": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
             "zscoreThreshold": params['resultFilteringMode']['zscore'] if params['resultFilteringMode']['filtering'] == 'zscore' else None,
+            # "secondaryCatCutoff": params['secondaryCatCutoff'],
+            # "secondaryAnovaExponent": params['secondaryAnovaExponent'],
+            # "secondaryAnovaMultiplier": params['secondaryProbabilityMode']['anovaMultiplier'] if params['secondaryProbabilityMode']['mode'] == 'correlation' else None,
         }
 
     def runSearch(self, currentResults, trials=10, atpeParams=None):
@@ -590,6 +637,8 @@ class AlgorithmSimulation:
                 'nEICandidates': 24,
                 'secondaryCutoff': 0,
                 "secondaryCorrelationExponent": 1.0,
+                # 'secondaryCatCutoff': 0,
+                # "secondaryAnovaExponent": 1.0,
                 "secondaryProbabilityMode": {
                     "mode": "fixed",
                     "probability": 0.0
@@ -620,58 +669,100 @@ class AlgorithmSimulation:
 
         def computePrimarySecondary():
             if len(currentResults) < initializationRounds:
-                return self.parameters, [], [0.5] * len(self.parameters) # Put all parameters as primary
+                return self.parameters, [], [0.5] * len(self.parameters)  # Put all parameters as primary
 
             if len(set(result['loss'] for result in currentResults)) < 5:
                 return self.parameters, [], [0.5] * len(self.parameters)  # Put all parameters as primary
-
-            cutoffForTrial = atpeParams['secondaryCutoff']
-
-            def getValue(result, parameter):
-                if parameter['group'] == 'primary':
-                    return result[parameter['name']]
-                elif parameter['name'] in result['group']:
-                    return result['group'][parameter['name']]
-                else:
-                    return None
-
-            totalWeight = 0
-            correlations = {}
+            # print(3)
+            numberParameters = []
+            # categoricalParameters = []
             for parameter in self.parameters:
+                if isinstance(getValue(currentResults[0], parameter), float) or isinstance(getValue(currentResults[0], parameter), int):
+                    numberParameters.append(parameter)
+                # else:
+                #     categoricalParameters.append(parameter)
+            # print(4)
+            totalWeightNum = 0
+            # totalWeightCat = 0
+            correlations = {}
+            # categoricalEffects = {}
+
+            # Compute Spearman correlation for numerical parameters
+            for parameter in numberParameters:
                 if len(set(getValue(result, parameter) for result in currentResults if getValue(result, parameter) is not None)) < 2:
                     correlations[parameter['name']] = 0
                 else:
                     values = []
                     valueLosses = []
                     for result in currentResults:
-                        if isinstance(getValue(result, parameter), float) or isinstance(getValue(result, parameter), int):
-                            values.append(getValue(result, parameter))
+                        if getValue(result, parameter) is not None and result['loss'] is not None:
+                            values.append(getValue(result,parameter))
                             valueLosses.append(result['loss'])
 
                     correlation = math.pow(abs(scipy.stats.spearmanr(values, valueLosses)[0]), atpeParams['secondaryCorrelationExponent'])
                     correlations[parameter['name']] = correlation
-                    totalWeight += correlation
+                    totalWeightNum += correlation
+            # print(5)
+            # # Compute ANOVA for categorical parameters
+            # for parameter in categoricalParameters:
+            #     categories = set(getValue(result, parameter) for result in currentResults if getValue(result, parameter) is not None)
+            #     if len(categories) < 2:
+            #         categoricalEffects[parameter['name']] = 0
+            #     else:
+            #         categoryValues = {category: [] for category in categories}
+            #         for result in currentResults:
+            #             if getValue(result, parameter) is not None and result['loss'] is not None:
+            #                 categoryValues[getValue(result, parameter)].append(result['loss'])
 
-            threshold = totalWeight * abs(cutoffForTrial)
+            #         # Compute ANOVA F-statistic
+            #         if all(len(values) > 1 for values in categoryValues.values()):
+            #             f_statistic, p_value = f_oneway(*categoryValues.values())
+            #             anova_effect = math.pow(f_statistic, atpeParams['secondaryAnovaExponent'])
+            #         else:
+            #             anova_effect = 0
 
-            if cutoffForTrial < 0:
-                # Reverse order - we lock in the highest correlated parameters
-                sortedParameters = sorted(self.parameters, key=lambda parameter: correlations[parameter['name']])
+            #         categoricalEffects[parameter['name']] = anova_effect
+            #         totalWeightCat += anova_effect
+            # print(6)
+            # Determine thresholds separately for numerical and categorical parameters
+            thresholdNum = totalWeightNum * abs(atpeParams['secondaryCutoff'])
+            # thresholdCat = totalWeightCat * (1 - abs(atpeParams['secondaryCatCutoff']))
+
+            # Sort numerical parameters by correlation
+            if atpeParams['secondaryCutoff'] < 0:
+                sortedNumParameters = sorted(numberParameters, key=lambda parameter: correlations[parameter['name']])
             else:
-                # Normal order - sort properties by their correlation to lock in lowest correlated parameters
-                sortedParameters = sorted(self.parameters, key=lambda parameter: -correlations[parameter['name']])
+                sortedNumParameters = sorted(numberParameters, key=lambda parameter: -correlations[parameter['name']])
+            # print(8)
+            # Sort categorical parameters by ANOVA effect
+            # if atpeParams['secondaryCatCutoff'] < 0:
+            #     sortedCatParameters = sorted(categoricalParameters, key=lambda parameter: categoricalEffects[parameter['name']])
+            # else:
+            #     sortedCatParameters = sorted(categoricalParameters, key=lambda parameter: -categoricalEffects[parameter['name']])
 
+            # Determine primary and secondary parameters for numerical parameters
             primaryParameters = []
             secondaryParameters = []
-            cumulative = totalWeight
-            for parameter in sortedParameters:
-                if cumulative < threshold:
+            cumulativeNum = totalWeightNum
+            
+            for parameter in sortedNumParameters:
+                if cumulativeNum < thresholdNum:
                     secondaryParameters.append(parameter)
                 else:
                     primaryParameters.append(parameter)
 
-                cumulative -= correlations[parameter['name']]
+                cumulativeNum -= correlations[parameter['name']]
 
+            # # Determine primary and secondary parameters for categorical parameters
+            # for parameter in sortedCatParameters:
+            #     if cumulativeNum < thresholdCat:
+            #         secondaryParameters.append(parameter)
+            #     else:
+            #         primaryParameters.append(parameter)
+
+                # cumulativeNum -= categoricalEffects[parameter['name']]
+            # print(7)
+            # return primaryParameters, secondaryParameters, {**correlations, **categoricalEffects}
             return primaryParameters, secondaryParameters, correlations
 
         while len(newResults) < trials:
@@ -686,8 +777,9 @@ class AlgorithmSimulation:
             filteredResults = []
             removedResults = []
             if len(currentResults) > initializationRounds:
+                # print(1)
                 primaryParameters, secondaryParameters, correlations = computePrimarySecondary()
-
+                # print(2)
                 sortedResults = list(sorted(list(currentResults), key=lambda result:(result['loss'] if result['loss'] is not None else 1.0)))
                 topResults = sortedResults
                 if atpeParams['secondaryLockingMode']['locking'] == 'top':
@@ -709,7 +801,12 @@ class AlgorithmSimulation:
                                     else:
                                         lockedValues[secondary['name']] = random.uniform(0.0, 1.0)
                         elif atpeParams['secondaryProbabilityMode']['mode'] == 'correlation':
-                            probability = max(0, min(1, abs(correlations[secondary['name']]) * atpeParams['secondaryProbabilityMode']['multiplier']))
+                            if isinstance(getValue(currentResults[0], secondary), float) or isinstance(getValue(currentResults[0], secondary), int):
+                                 multiplier = atpeParams['secondaryProbabilityMode']['multiplier']
+                            # else:
+                            #     multiplier = atpeParams['secondaryProbabilityMode']['anovaMultiplier']
+
+                            probability = max(0, min(1, abs(correlations[secondary['name']]) * multiplier))
                             if random.uniform(0, 1) < probability:
                                 if atpeParams['secondaryLockingMode']['locking'] == 'top':
                                     lockResult = random.choice(topResults)
@@ -956,11 +1053,14 @@ class AlgorithmSimulation:
         data['noise'] = self.noiseFactor
         data['fail_rate'] = self.failRate
 
-        data['interactions'] = float(self.interactionCounts['linear'] + self.interactionCounts['peakvalley'] + self.interactionCounts['wave'] + self.interactionCounts['random'])
+        data['interactions'] = float(self.interactionCounts['linear'] + self.interactionCounts['peakvalley'] + self.interactionCounts['wave'] + self.interactionCounts['random'] 
+                                     + self.interactionCounts['hyperbolic']
+                                     )
         data['interactions_linear'] = float(self.interactionCounts['linear']) / max(1, data['interactions'])
         data['interactions_peakvalley'] = float(self.interactionCounts['peakvalley']) / max(1, data['interactions'])
         data['interactions_wave'] = float(self.interactionCounts['wave']) / max(1, data['interactions'])
         data['interactions_random'] = float(self.interactionCounts['random']) / max(1, data['interactions'])
+        data['interactions_hyperbolic'] = float(self.interactionCounts['hyperbolic']) / max(1, data['interactions'])
         data['interactions_index'] = float(max(1, data['interactions'])) / float(data['num_parameters'] * data['num_parameters'] * 0.3)
 
         data['contributions_linear'] = float(self.contributionCounts['linear']) / data['num_parameters']
@@ -968,6 +1068,7 @@ class AlgorithmSimulation:
         data['contributions_exponential'] = float(self.contributionCounts['exponential']) / data['num_parameters']
         data['contributions_logarithmic'] = float(self.contributionCounts['logarithmic']) / data['num_parameters']
         data['contributions_random'] = float(self.contributionCounts['random']) / data['num_parameters']
+        data['contributions_sigmoid'] = float(self.contributionCounts['sigmoid']) / data['num_parameters']
 
     def computePartialResultStatistics(self, results):
         losses = numpy.array(sorted([result['loss'] for result in results if result['loss'] is not None]))

@@ -15,7 +15,10 @@ from pprint import pprint
 import copy
 import hypermax.file_utils
 from sklearn.cluster import KMeans
-from scipy.stats import zscore
+from scipy.stats import zscore, f_oneway
+from catboost import Pool, CatBoostRegressor, CatBoostClassifier
+import joblib
+import shap
 
 class ATPEOptimizer(OptimizationAlgorithmBase):
     atpeParameters = [
@@ -25,11 +28,14 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
         'resultFilteringLossRankMultiplier',
         'resultFilteringMode',
         'resultFilteringRandomProbability',
-        'clustersQuantile',
-        'zscoreThreshold',
+        # 'clustersQuantile',
+        # 'zscoreThreshold',
         'secondaryCorrelationExponent',
         'secondaryCorrelationMultiplier',
         'secondaryCutoff',
+        # 'secondaryAnovaExponent',
+        # 'secondaryAnovaMultiplier',
+        # 'secondaryCatCutoff',
         'secondaryFixedProbability',
         'secondaryLockingMode',
         'secondaryProbabilityMode',
@@ -43,22 +49,34 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
         'resultFilteringAgeMultiplier',
         'resultFilteringLossRankMultiplier',
         'resultFilteringRandomProbability',
-        'clustersQuantile',
-        'zscoreThreshold',
+        # 'clustersQuantile',
+        # 'zscoreThreshold',
         'secondaryTopLockingPercentile',
         'secondaryCorrelationExponent',
         'secondaryCorrelationMultiplier',
+        # 'secondaryAnovaExponent',
+        # 'secondaryAnovaMultiplier',
         'secondaryFixedProbability',
         'secondaryCutoff',
+        # 'secondaryCatCutoff',
         'gamma',
         'nEICandidates'
     ]
 
     atpeParameterValues = {
-        'resultFilteringMode': ['age', 'loss_rank', 'cluster', 'zscore', 'none', 'random'],
+        'resultFilteringMode': ['age', 'loss_rank',
+                                #  'cluster', 
+                                # 'zscore', 
+                                 'none', 'random'],
         'secondaryLockingMode': ['random', 'top'],
         'secondaryProbabilityMode': ['correlation', 'fixed']
     }
+
+    classPredictorKeys = [
+        'resultFilteringMode',
+        'secondaryLockingMode',
+        'secondaryProbabilityMode'
+    ]
 
     atpeModelFeatureKeys = [
         'all_correlation_best_percentile25_ratio',
@@ -189,10 +207,20 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
         self.parameterModelConfigurations = {}
         for param in self.atpeParameters:
             modelData = pkg_resources.resource_string(__name__, "../atpe_models/model-" + param + '.txt')
+            # modelData = pkg_resources.resource_string(__name__, "../atpe_models/model-" + param + '.pkl')
             with hypermax.file_utils.ClosedNamedTempFile(modelData) as model_file_name:
                 self.parameterModels[param] = lightgbm.Booster(model_file=model_file_name)
+                # if param in self.classPredictorKeys:
+                #     model = CatBoostClassifier()
+                # else:
+                #     model = CatBoostRegressor()
+                
+                # model.load_model(model_file_name)
+                # model = joblib.load(model_file_name)
+                # self.parameterModels[param] = model
 
             configString = pkg_resources.resource_string(__name__, "../atpe_models/model-" + param + '-configuration.json')
+            # print(configString)
             data = json.loads(configString)
             self.parameterModelConfigurations[param] = data
 
@@ -232,11 +260,14 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                 'resultFilteringLossRankMultiplier': None,
                 'resultFilteringMode': "none",
                 'resultFilteringRandomProbability': None,
-                'clustersQuantile': 0.8,
-                'zscoreThreshold': 0.0,
+                # 'clustersQuantile': 0.8,
+                # 'zscoreThreshold': 0.0,
                 'secondaryCorrelationExponent': 1.0,
                 'secondaryCorrelationMultiplier': None,
                 'secondaryCutoff': 0,
+                # 'secondaryAnovaExponent': 1.0,
+                # 'secondaryAnovaMultiplier': None,
+                # 'secondaryCatCutoff': 0,
                 'secondarySorting': 0,
                 'secondaryFixedProbability': 0.5,
                 'secondaryLockingMode': 'top',
@@ -255,36 +286,49 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                 scalingModel = self.featureScalingModels[feature]
                 transformed = scalingModel.transform([[stats[feature]]])[0][0]
                 baseVector.append(transformed)
-
+          
             baseVector = numpy.array([baseVector])
-
+      
             for atpeParamIndex, atpeParameter in enumerate(self.atpeParameterCascadeOrdering):
                 vector = copy.copy(baseVector)[0].tolist()
+                # print('base')
+            
+                # print(len(vector))
                 atpeParamFeatures = self.atpeParameterCascadeOrdering[:atpeParamIndex]
+                # print(len(atpeParamFeatures))
+                # print(atpeParamIndex)
                 for atpeParamFeature in atpeParamFeatures:
+                    # print(atpeParamFeature)
                     # We have to insert a special value of -3 for any conditional parameters.
                     if atpeParamFeature == 'resultFilteringAgeMultiplier' and atpeParams['resultFilteringMode'] != 'age':
+                        # print('resultFilteringAgeMultiplier1')
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature == 'resultFilteringLossRankMultiplier' and atpeParams['resultFilteringMode'] != 'loss_rank':
+                        # print('resultFilteringLossRankMultiplier1')
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature == 'resultFilteringRandomProbability' and atpeParams['resultFilteringMode'] != 'random':
+                        # print('resultFilteringRandomProbability1')
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature == 'secondaryCorrelationMultiplier' and atpeParams['secondaryProbabilityMode'] != 'correlation':
+                        vector.append(-3)  # This is the default value inserted when parameters aren't relevant
+                    elif atpeParamFeature == 'secondaryAnovaMultiplier' and atpeParams['secondaryProbabilityMode'] != 'correlation':
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature == 'secondaryFixedProbability' and atpeParams['secondaryProbabilityMode'] != 'fixed':
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature == 'secondaryTopLockingPercentile' and atpeParams['secondaryLockingMode'] != 'top':
                         vector.append(-3)  # This is the default value inserted when parameters aren't relevant
-                    if atpeParamFeature == 'clustersQuantile' and atpeParams['resultFilteringMode'] != 'cluster':
-                        vector.append(-3)  # This is the default value inserted when parameters aren't relevant
-                    if atpeParamFeature == 'zscoreThreshold' and atpeParams['resultFilteringMode'] != 'zscore':
-                        vector.append(-3)  # This is the default value inserted when parameters aren't relevant
+                    # elif atpeParamFeature == 'clustersQuantile' and atpeParams['resultFilteringMode'] != 'cluster':
+                    #     vector.append(-3)  # This is the default value inserted when parameters aren't relevant
+                    # elif atpeParamFeature == 'zscoreThreshold' and atpeParams['resultFilteringMode'] != 'zscore':
+                    #     vector.append(-3)  # This is the default value inserted when parameters aren't relevant
                     elif atpeParamFeature in self.atpeParameterValues:
+                        # print('addin')
+                        # print(len(self.atpeParameterValues[atpeParamFeature]))
                         for value in self.atpeParameterValues[atpeParamFeature]:
                             vector.append(1.0 if atpeParams[atpeParamFeature] == value else 0)
                     else:
                         vector.append(float(atpeParams[atpeParamFeature]))
-
+                # print(vector)
                 allFeatureKeysForATPEParamModel = copy.copy(self.atpeModelFeatureKeys)
                 for atpeParamFeature in atpeParamFeatures:
                     if atpeParamFeature in self.atpeParameterValues:
@@ -292,9 +336,47 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                             allFeatureKeysForATPEParamModel.append(atpeParamFeature + "_" + value)
                     else:
                         allFeatureKeysForATPEParamModel.append(atpeParamFeature)
-
+                # print(len(vector))
                 value = self.parameterModels[atpeParameter].predict([vector], predict_disable_shape_check=True)[0]
+                # print(atpeParameter)
+                # if atpeParameter in self.classPredictorKeys:
+                #     value = self.parameterModels[atpeParameter].predict_proba([vector])[0]
+                # else:
+                #     value = self.parameterModels[atpeParameter].predict([vector])[0]
                 featureContributions = self.parameterModels[atpeParameter].predict([vector], pred_contrib=True, predict_disable_shape_check=True)[0]
+                # vector_pool = Pool([vector])
+                # featureContributions = self.parameterModels[atpeParameter].get_feature_importance(
+                #     data=vector_pool,
+                #     type="ShapValues"
+                # )[0]
+                # For feature contributions (SHAP values)
+                # feature_file = pkg_resources.resource_string(__name__, "../atpe_models/features-" + atpeParameter + '.pkl')
+                # with hypermax.file_utils.ClosedNamedTempFile(feature_file) as feature_file_name:
+                #     features = joblib.load(feature_file_name)
+                
+                # Reduce the background data size to K samples
+                # K = 5  # Choose a value for K, e.g., 100
+                # reduced_background = shap.kmeans(features, K)
+                # # print(features)
+              
+                # explainer = shap.KernelExplainer(self.parameterModels[atpeParameter].predict, reduced_background)
+                # shap_values = explainer.shap_values(numpy.array([vector]), show_progress=False)
+
+                # In case of multiclass classification, shap_values is a list of arrays (one per class)
+                # In case of regression or binary classification, shap_values is a single array
+                # featureContributions = shap_values if isinstance(shap_values, list) else shap_values[0]
+                # print(featureContributions)
+                # print("Feature Contributions Shape:", featureContributions.shape)
+                # print("Expected Size:", len(allFeatureKeysForATPEParamModel) + 1, len(self.atpeParameterValues[atpeParameter]))
+                
+                # print(f"Type of shap_values: {type(shap_values)}")
+                # print(f"Length of shap_values (if list): {len(shap_values) if isinstance(shap_values, list) else 'N/A'}")
+                # print(f"Shape of shap_values: {shap_values.shape}")
+                # If it's a list, check the shape of each element
+                # if isinstance(shap_values, list):
+                #     for i, class_shap_values in enumerate(shap_values):
+                #         print(f"Shape of SHAP values for class {i}: {np.array(class_shap_values).shape}")
+                
                 # print(value)
                 # print(featureContributions)
                 atpeParamDetails[atpeParameter] = {
@@ -317,6 +399,8 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
 
                     # Make a random weighted choice based on the normalized probabilities
                     probabilities = value / numpy.sum(value)
+                    # print(self.atpeParameterValues[atpeParameter])
+                    # print(probabilities)
                     chosen = numpy.random.choice(a=self.atpeParameterValues[atpeParameter], p=probabilities)
                     atpeParams[atpeParameter] = str(chosen)
                 else:
@@ -330,7 +414,12 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                 if atpeParameter in self.atpeParameterValues:
                     featureContributions = numpy.mean(
                         numpy.reshape(featureContributions, newshape=(len(allFeatureKeysForATPEParamModel) + 1, len(self.atpeParameterValues[atpeParameter]))), axis=1)
-
+                # if isinstance(shap_values, list):
+                    # Average the contributions across all classes if needed
+                    # featureContributions = numpy.mean([class_shap_values for class_shap_values in shap_values], axis=0)
+                # else:
+                    # For binary classification or regression, just remove the base value
+                    # featureContributions = shap_values[0]
                 contributions = [(self.atpeModelFeatureKeys[index], float(featureContributions[index])) for index in range(len(self.atpeModelFeatureKeys))]
                 # print(featureContributions)
                 # print(contributions)
@@ -363,14 +452,20 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                     atpeParams['secondaryCorrelationMultiplier'] = max(0.2, min(1.8, atpeParams['secondaryCorrelationMultiplier']))
                 if atpeParameter == 'secondaryCutoff':
                     atpeParams['secondaryCutoff'] = max(-1.0, min(1.0, atpeParams['secondaryCutoff']))
+                if atpeParameter == 'secondaryAnovaExponent':
+                    atpeParams['secondaryAnovaExponent'] = max(1.0, min(3.0, atpeParams['secondaryAnovaExponent']))
+                if atpeParameter == 'secondaryAnovaMultiplier':
+                    atpeParams['secondaryAnovaMultiplier'] = max(0.2, min(1.8, atpeParams['secondaryAnovaMultiplier']))    
+                if atpeParameter == 'secondaryCatCutoff':
+                    atpeParams['secondaryCatCutoff'] = max(-1.0, min(1.0, atpeParams['secondaryCatCutoff']))
                 if atpeParameter == 'secondaryFixedProbability':
                     atpeParams['secondaryFixedProbability'] = max(0.2, min(0.8, atpeParams['secondaryFixedProbability']))
                 if atpeParameter == 'secondaryTopLockingPercentile':
                     atpeParams['secondaryTopLockingPercentile'] = max(0, min(10.0, atpeParams['secondaryTopLockingPercentile']))
                 if atpeParameter == 'clustersQuantile':
                     atpeParams['clustersQuantile'] = max(0.9, min(0.4, atpeParams['clustersQuantile']))
-                if atpeParameter == 'zscoreThreshold':
-                    atpeParams['zscoreThreshold'] = max(-3.0, min(3.0, atpeParams['zscoreThreshold']))
+                # if atpeParameter == 'zscoreThreshold':
+                #     atpeParams['zscoreThreshold'] = max(-3.0, min(3.0, atpeParams['zscoreThreshold']))
 
             # Now blank out unneeded params so they don't confuse us
             if atpeParams['secondaryLockingMode'] == 'random':
@@ -378,6 +473,7 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
 
             if atpeParams['secondaryProbabilityMode'] == 'fixed':
                 atpeParams['secondaryCorrelationMultiplier'] = None
+                # atpeParams['secondaryAnovaMultiplier'] = None
             else:
                 atpeParams['secondaryFixedProbability'] = None
 
@@ -385,33 +481,33 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                 atpeParams['resultFilteringAgeMultiplier'] = None
                 atpeParams['resultFilteringLossRankMultiplier'] = None
                 atpeParams['resultFilteringRandomProbability'] = None
-                atpeParams['clustersQuantile'] = None
-                atpeParams['zscoreThreshold'] = None
+                # atpeParams['clustersQuantile'] = None
+                # atpeParams['zscoreThreshold'] = None
             elif atpeParams['resultFilteringMode'] == 'age':
                 atpeParams['resultFilteringLossRankMultiplier'] = None
                 atpeParams['resultFilteringRandomProbability'] = None
-                atpeParams['clustersQuantile'] = None
-                atpeParams['zscoreThreshold'] = None
+                # atpeParams['clustersQuantile'] = None
+                # atpeParams['zscoreThreshold'] = None
             elif atpeParams['resultFilteringMode'] == 'loss_rank':
                 atpeParams['resultFilteringAgeMultiplier'] = None
                 atpeParams['resultFilteringRandomProbability'] = None
-                atpeParams['clustersQuantile'] = None
-                atpeParams['zscoreThreshold'] = None
+                # atpeParams['clustersQuantile'] = None
+                # atpeParams['zscoreThreshold'] = None
             elif atpeParams['resultFilteringMode'] == 'random':
                 atpeParams['resultFilteringAgeMultiplier'] = None
                 atpeParams['resultFilteringLossRankMultiplier'] = None
-                atpeParams['clustersQuantile'] = None
-                atpeParams['zscoreThreshold'] = None
+                # atpeParams['clustersQuantile'] = None
+                # atpeParams['zscoreThreshold'] = None
             elif atpeParams['resultFilteringMode'] == 'cluster':
                 atpeParams['resultFilteringAgeMultiplier'] = None
                 atpeParams['resultFilteringLossRankMultiplier'] = None
                 atpeParams['resultFilteringRandomProbability'] = None
-                atpeParams['zscoreThreshold'] = None
-            elif atpeParams['resultFilteringMode'] == 'zscore':
-                atpeParams['resultFilteringAgeMultiplier'] = None
-                atpeParams['resultFilteringLossRankMultiplier'] = None
-                atpeParams['resultFilteringRandomProbability'] = None
-                atpeParams['clustersQuantile'] = None
+                # atpeParams['zscoreThreshold'] = None
+            # elif atpeParams['resultFilteringMode'] == 'zscore':
+            #     atpeParams['resultFilteringAgeMultiplier'] = None
+            #     atpeParams['resultFilteringLossRankMultiplier'] = None
+            #     atpeParams['resultFilteringRandomProbability'] = None
+                # atpeParams['clustersQuantile'] = None
 
             for atpeParameter in self.atpeParameters:
                 if atpeParams[atpeParameter] is None:
@@ -451,6 +547,7 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                     correlations[parameter.name] = correlation
                     totalWeight += correlation
 
+            # threshold = totalWeight * (1- abs(atpeParams['secondaryCutoff']))
             threshold = totalWeight * abs(atpeParams['secondaryCutoff'])
 
             if atpeParams['secondaryCutoff'] < 0:
@@ -473,21 +570,98 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
 
             return primaryParameters + otherParameters, secondaryParameters, correlations
 
-        def computeClusteredPrimarySecondary():
-            if len(results) < initializationRounds:
-                return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
+       
+        # def computePrimarySecondary():
+        #     if len(results) < initializationRounds:
+        #         return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
 
-            if len(set(result['loss'] for result in results)) < 5:
-                return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
+        #     if len(set(result['loss'] for result in results)) < 5:
+        #         return parameters, [], [0.5] * len(parameters)  # Put all parameters as primary
 
-            numberParameters = [parameter for parameter in parameters if parameter.config['type'] == 'number']
-            otherParameters = [parameter for parameter in parameters if parameter.config['type'] != 'number']
+        #     numberParameters = [parameter for parameter in parameters if parameter.config['type'] == 'number']
+        #     categoricalParameters = [parameter for parameter in parameters if parameter.config['type'] != 'number']
 
-            primaryParameters = []
-            secondaryParameters = []
+        #     totalWeightNum = 0
+        #     totalWeightCat = 0
+        #     correlations = {}
+        #     categoricalEffects = {}
 
-            return primaryParameters + otherParameters, secondaryParameters, []
+        #     # Compute Spearman correlation for numerical parameters
+        #     for parameter in numberParameters:
+        #         if len(set(result[parameter.name] for result in results if result[parameter.name] is not None)) < 2:
+        #             correlations[parameter.name] = 0
+        #         else:
+        #             values = []
+        #             valueLosses = []
+        #             for result in results:
+        #                 if result[parameter.name] is not None and result['loss'] is not None:
+        #                     values.append(result[parameter.name])
+        #                     valueLosses.append(result['loss'])
 
+        #             correlation = math.pow(abs(scipy.stats.spearmanr(values, valueLosses)[0]), atpeParams['secondaryCorrelationExponent'])
+        #             correlations[parameter.name] = correlation
+        #             totalWeightNum += correlation
+
+        #     # Compute ANOVA for categorical parameters
+        #     for parameter in categoricalParameters:
+        #         categories = set(result[parameter.name] for result in results if result[parameter.name] is not None)
+        #         if len(categories) < 2:
+        #             categoricalEffects[parameter.name] = 0
+        #         else:
+        #             categoryValues = {category: [] for category in categories}
+        #             for result in results:
+        #                 if result[parameter.name] is not None and result['loss'] is not None:
+        #                     categoryValues[result[parameter.name]].append(result['loss'])
+
+        #             # Compute ANOVA F-statistic
+        #             if all(len(values) > 1 for values in categoryValues.values()):
+        #                 f_statistic, p_value = f_oneway(*categoryValues.values())
+        #                 anova_effect = math.pow(f_statistic, atpeParams['secondaryAnovaExponent'])
+        #             else:
+        #                 anova_effect = 0
+
+        #             categoricalEffects[parameter.name] = anova_effect
+        #             totalWeightCat += anova_effect
+
+        #     # Determine thresholds separately for numerical and categorical parameters
+        #     thresholdNum = totalWeightNum * abs(atpeParams['secondaryCutoff'])
+        #     thresholdCat = totalWeightCat * (1 - abs(atpeParams['secondaryCatCutoff']))
+
+        #     # Sort numerical parameters by correlation
+        #     if atpeParams['secondaryCutoff'] < 0:
+        #         sortedNumParameters = sorted(numberParameters, key=lambda parameter: correlations[parameter.name])
+        #     else:
+        #         sortedNumParameters = sorted(numberParameters, key=lambda parameter: -correlations[parameter.name])
+
+        #     # Sort categorical parameters by ANOVA effect
+        #     if atpeParams['secondaryCatCutoff'] < 0:
+        #         sortedCatParameters = sorted(categoricalParameters, key=lambda parameter: categoricalEffects[parameter.name])
+        #     else:
+        #         sortedCatParameters = sorted(categoricalParameters, key=lambda parameter: -categoricalEffects[parameter.name])
+
+        #     # Determine primary and secondary parameters for numerical parameters
+        #     primaryParameters = []
+        #     secondaryParameters = []
+        #     cumulativeNum = totalWeightNum
+            
+        #     for parameter in sortedNumParameters:
+        #         if cumulativeNum < thresholdNum:
+        #             secondaryParameters.append(parameter)
+        #         else:
+        #             primaryParameters.append(parameter)
+
+        #         cumulativeNum -= correlations[parameter.name]
+
+        #     # Determine primary and secondary parameters for categorical parameters
+        #     for parameter in sortedCatParameters:
+        #         if cumulativeNum < thresholdCat:
+        #             secondaryParameters.append(parameter)
+        #         else:
+        #             primaryParameters.append(parameter)
+
+        #         cumulativeNum -= categoricalEffects[parameter.name]
+
+        #     return primaryParameters, secondaryParameters, {**correlations, **categoricalEffects}
 
         if len([result['loss'] for result in results if result['loss'] is not None]) == 0:
             maxLoss = 1
@@ -527,7 +701,11 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                             lockedValues[secondary.name] = self.chooseRandomValueForParameter(secondary)
 
                 elif atpeParams['secondaryProbabilityMode'] == 'correlation':
-                    probability = max(0, min(1, abs(correlations[secondary.name]) * atpeParams['secondaryCorrelationMultiplier']))
+                    if secondary.config['type'] == 'number':
+                        multiplier = atpeParams['secondaryCorrelationMultiplier']
+                    else:
+                        multiplier = atpeParams['secondaryAnovaMultiplier']
+                    probability = max(0, min(1, abs(correlations[secondary.name]) * multiplier))
                     if random.uniform(0, 1) < probability:
                         self.lastLockedParameters.append(secondary.name)
                         if atpeParams['secondaryLockingMode'] == 'top':
@@ -537,20 +715,20 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                         elif atpeParams['secondaryLockingMode'] == 'random':
                             lockedValues[secondary.name] = self.chooseRandomValueForParameter(secondary)
 
-            if atpeParams['clustersQuantile'] is not None:
-                clusters_q = atpeParams['clustersQuantile']
-                numeric_features = [self.extract_numeric_features(obj) for obj in results]
+            # if atpeParams['clustersQuantile'] is not None:
+            #     clusters_q = atpeParams['clustersQuantile']
+            #     numeric_features = [self.extract_numeric_features(obj) for obj in results]
 
-                n_clusters = int(round(clusters_q * len(results)))
+            #     n_clusters = int(round(clusters_q * len(results)))
 
-                kmeans = KMeans(n_clusters=int(n_clusters), random_state=0).fit(numeric_features)
-                labels = kmeans.labels_
-                # print("Tried clustering with " + str(n_clusters) + " clusters")
-                # print(labels)
-                selected_in_cluster = {i: False for i in range(int(n_clusters))}
+            #     kmeans = KMeans(n_clusters=int(n_clusters), random_state=0).fit(numeric_features)
+            #     labels = kmeans.labels_
+            #     # print("Tried clustering with " + str(n_clusters) + " clusters")
+            #     # print(labels)
+            #     selected_in_cluster = {i: False for i in range(int(n_clusters))}
             
-            if atpeParams['resultFilteringMode'] == 'zscore':
-                zscores = abs(zscore([result['loss'] for result in results]))
+            # if atpeParams['resultFilteringMode'] == 'zscore':
+            #     zscores = abs(zscore([result['loss'] for result in results]))
 
             # Now last step, we filter results prior to sending them into ATPE
             for resultIndex, result in enumerate(results):
@@ -573,17 +751,17 @@ class ATPEOptimizer(OptimizationAlgorithmBase):
                         filteredResults.append(result)
                     else:
                         removedResults.append(result)
-                elif atpeParams['resultFilteringMode'] == 'cluster':
-                    if not selected_in_cluster[labels[resultIndex]]:
-                        filteredResults.append(result)
-                        selected_in_cluster[labels[resultIndex]] = True
-                    else:
-                        removedResults.append(result)
-                elif atpeParams['resultFilteringMode'] == 'zscore':
-                    if (atpeParams['zscoreThreshold'] < 0 and zscores[resultIndex] > abs(atpeParams['zscoreThreshold'])) or (atpeParams['zscoreThreshold'] > 0 and zscores[resultIndex] < 3 - atpeParams['zscoreThreshold']):
-                        filteredResults.append(result)
-                    else:
-                        removedResults.append(result)
+                # elif atpeParams['resultFilteringMode'] == 'cluster':
+                #     if not selected_in_cluster[labels[resultIndex]]:
+                #         filteredResults.append(result)
+                #         selected_in_cluster[labels[resultIndex]] = True
+                #     else:
+                #         removedResults.append(result)
+                # elif atpeParams['resultFilteringMode'] == 'zscore':
+                #     if (atpeParams['zscoreThreshold'] < 0 and zscores[resultIndex] > abs(atpeParams['zscoreThreshold'])) or (atpeParams['zscoreThreshold'] > 0 and zscores[resultIndex] < 3 - atpeParams['zscoreThreshold']):
+                #         filteredResults.append(result)
+                #     else:
+                #         removedResults.append(result)
 
 
 
