@@ -13,7 +13,7 @@ import matplotlib.style as mplstyle
 import matplotlib.pyplot as plt
 from pprint import pprint
 import concurrent.futures
-import colors
+# import colors
 import traceback
 import functools
 import warnings

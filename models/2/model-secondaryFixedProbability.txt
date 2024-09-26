@@ -1,0 +1,206 @@
+tree
+version=v4
+num_class=1
+num_tree_per_iteration=1
+label_index=0
+max_feature_idx=130
+objective=regression
+feature_names=all_correlation_best_percentile25_ratio all_correlation_best_percentile50_ratio all_correlation_best_percentile75_ratio all_correlation_kurtosis all_correlation_percentile5_percentile25_ratio all_correlation_skew all_correlation_stddev_best_ratio all_correlation_stddev_median_ratio all_loss_best_percentile25_ratio all_loss_best_percentile50_ratio all_loss_best_percentile75_ratio all_loss_kurtosis all_loss_percentile5_percentile25_ratio all_loss_skew all_loss_stddev_best_ratio all_loss_stddev_median_ratio log10_cardinality recent_10_correlation_best_percentile25_ratio recent_10_correlation_best_percentile50_ratio recent_10_correlation_best_percentile75_ratio recent_10_correlation_kurtosis recent_10_correlation_percentile5_percentile25_ratio recent_10_correlation_skew recent_10_correlation_stddev_best_ratio recent_10_correlation_stddev_median_ratio recent_10_loss_best_percentile25_ratio recent_10_loss_best_percentile50_ratio recent_10_loss_best_percentile75_ratio recent_10_loss_kurtosis recent_10_loss_percentile5_percentile25_ratio recent_10_loss_skew recent_10_loss_stddev_best_ratio recent_10_loss_stddev_median_ratio recent_15%_correlation_best_percentile25_ratio recent_15%_correlation_best_percentile50_ratio recent_15%_correlation_best_percentile75_ratio recent_15%_correlation_kurtosis recent_15%_correlation_percentile5_percentile25_ratio recent_15%_correlation_skew recent_15%_correlation_stddev_best_ratio recent_15%_correlation_stddev_median_ratio recent_15%_loss_best_percentile25_ratio recent_15%_loss_best_percentile50_ratio recent_15%_loss_best_percentile75_ratio recent_15%_loss_kurtosis recent_15%_loss_percentile5_percentile25_ratio recent_15%_loss_skew recent_15%_loss_stddev_best_ratio recent_15%_loss_stddev_median_ratio recent_25_correlation_best_percentile25_ratio recent_25_correlation_best_percentile50_ratio recent_25_correlation_best_percentile75_ratio recent_25_correlation_kurtosis recent_25_correlation_percentile5_percentile25_ratio recent_25_correlation_skew recent_25_correlation_stddev_best_ratio recent_25_correlation_stddev_median_ratio recent_25_loss_best_percentile25_ratio recent_25_loss_best_percentile50_ratio recent_25_loss_best_percentile75_ratio recent_25_loss_kurtosis recent_25_loss_percentile5_percentile25_ratio recent_25_loss_skew recent_25_loss_stddev_best_ratio recent_25_loss_stddev_median_ratio top_10%_correlation_best_percentile25_ratio top_10%_correlation_best_percentile50_ratio top_10%_correlation_best_percentile75_ratio top_10%_correlation_kurtosis top_10%_correlation_percentile5_percentile25_ratio top_10%_correlation_skew top_10%_correlation_stddev_best_ratio top_10%_correlation_stddev_median_ratio top_10%_loss_best_percentile25_ratio top_10%_loss_best_percentile50_ratio top_10%_loss_best_percentile75_ratio top_10%_loss_kurtosis top_10%_loss_percentile5_percentile25_ratio top_10%_loss_skew top_10%_loss_stddev_best_ratio top_10%_loss_stddev_median_ratio top_20%_correlation_best_percentile25_ratio top_20%_correlation_best_percentile50_ratio top_20%_correlation_best_percentile75_ratio top_20%_correlation_kurtosis top_20%_correlation_percentile5_percentile25_ratio top_20%_correlation_skew top_20%_correlation_stddev_best_ratio top_20%_correlation_stddev_median_ratio top_20%_loss_best_percentile25_ratio top_20%_loss_best_percentile50_ratio top_20%_loss_best_percentile75_ratio top_20%_loss_kurtosis top_20%_loss_percentile5_percentile25_ratio top_20%_loss_skew top_20%_loss_stddev_best_ratio top_20%_loss_stddev_median_ratio top_30%_correlation_best_percentile25_ratio top_30%_correlation_best_percentile50_ratio top_30%_correlation_best_percentile75_ratio top_30%_correlation_kurtosis top_30%_correlation_percentile5_percentile25_ratio top_30%_correlation_skew top_30%_correlation_stddev_best_ratio top_30%_correlation_stddev_median_ratio top_30%_loss_best_percentile25_ratio top_30%_loss_best_percentile50_ratio top_30%_loss_best_percentile75_ratio top_30%_loss_kurtosis top_30%_loss_percentile5_percentile25_ratio top_30%_loss_skew top_30%_loss_stddev_best_ratio top_30%_loss_stddev_median_ratio resultFilteringMode_age resultFilteringMode_loss_rank resultFilteringMode_none resultFilteringMode_random resultFilteringMode_cluster resultFilteringMode_skewness secondaryProbabilityMode_correlation secondaryProbabilityMode_fixed secondaryLockingMode_random secondaryLockingMode_top resultFilteringAgeMultiplier resultFilteringLossRankMultiplier resultFilteringRandomProbability clustersQuantile skewnessThreshold secondaryTopLockingPercentile secondaryCorrelationExponent secondaryCorrelationMultiplier
+feature_infos=[-2.8698000000000001:14.475] [-2.9916:40.982999999999997] [-4.2297000000000002:34.328000000000003] [-3.3816000000000002:17.693999999999999] [-2.8151999999999999:12.757] [-9.5478000000000005:7.9188000000000001] [-7.4279000000000002:9.4465000000000003] [-3.5331999999999999:44.308] [-15.571999999999999:2.8117000000000001] [-9.9265000000000008:3.0670999999999999] [-4.8034999999999997:2.9230999999999998] [-3.2772999999999999:8.2760999999999996] [-22.015000000000001:2.5297000000000001] [-7.5875000000000004:5.9936999999999996] [-1.6309:49.115000000000002] [-2.5421:103.42] [-2.4544999999999999:1.9938] [-4.8251999999999997:879.37] [-2.3460000000000001:148.34999999999999] [-1.6995:43.222999999999999] [-2.2827999999999999:13.196999999999999] [-5.6875:764.88] [-8.2172000000000001:7.0141] [-16.437999999999999:6.5782999999999996] [-2.2627999999999999:151.38999999999999] [-25.905999999999999:2.2286000000000001] [-15.117000000000001:2.3727999999999998] [-8.5222999999999995:2.4413] [-1.9087000000000001:1.7504] [-33.856000000000002:2.2412000000000001] [-5.4176000000000002:1.6658999999999999] [-1.4277:103.43000000000001] [-1.3933:110.27] [-5.5869:89.667000000000002] [-3.0847000000000002:99.260999999999996] [-2.0844999999999998:347.67000000000002] [-2.6974:16.975000000000001] [-6.8324999999999996:83.869] [-11.439:8.4606999999999992] [-15.206:5.7168000000000001] [-3.0354999999999999:107.90000000000001] [-31.899000000000001:2.6882000000000001] [-19.216999999999999:2.9100000000000001] [-9.4177999999999997:2.7241] [-1.5808:12.898999999999999] [-38.616999999999997:2.6766000000000001] [-4.2020999999999997:5.9352] [-1.7479:71.268000000000001] [-1.857:74.052000000000007] [-6.1003999999999996:293.37] [-3.3742000000000001:651.10000000000002] [-2.2572000000000001:165.90000000000001] [-2.8012999999999999:18.335999999999999] [-7.5785999999999998:268.50999999999999] [-10.186:8.2111999999999998] [-7.4836999999999998:6.5540000000000003] [-3.2176:666.92999999999995] [-20.007000000000001:2.1316000000000002] [-12.423:2.3441999999999998] [-6.7465000000000002:2.4243000000000001] [-1.9925999999999999:3.3845000000000001] [-26.161999999999999:2.2612999999999999] [-4.6406999999999998:3.1008] [-1.9272:87.989999999999995] [-2.2803:110.09] [-4.4386999999999999:300.00999999999999] [-2.1698:79.063999999999993] [-1.8744000000000001:141.84] [-1.76:9.9113000000000007] [-5.3521000000000001:285.61000000000001] [-7.4729999999999999:5.7477999999999998] [-18.027999999999999:7.8883999999999999] [-2.2479:68.688000000000002] [-75.135999999999996:2.1545999999999998] [-52.661999999999999:2.512] [-41.643000000000001:2.6665000000000001] [-2.8679999999999999:39.640999999999998] [-109.06:2.2332000000000001] [-12.170999999999999:8.8825000000000003] [-2.5815999999999999:134.72] [-2.7113999999999998:137.19999999999999] [-5.0545999999999998:333.36000000000001] [-2.7948:94.932000000000002] [-1.5569999999999999:93.849999999999994] [-1.8991:8.4245000000000001] [-6.3464:332] [-7.9036:5.3693] [-18.709:8.6065000000000005] [-2.8361999999999998:101.18000000000001] [-30.452999999999999:2.4931999999999999] [-25.254999999999999:2.7263000000000002] [-21.582999999999998:3.0259999999999998] [-3.8860999999999999:80.632999999999996] [-45.720999999999997:2.6288999999999998] [-18.184999999999999:7.6711999999999998] [-2.6309:108.7] [-2.8500000000000001:59.366999999999997] [-5.1521999999999997:406.79000000000002] [-2.6756000000000002:149.41] [-1.3184:119.73999999999999] [-2.1150000000000002:12.02] [-6.1627999999999998:358.75999999999999] [-4.9555999999999996:6.3068] [-18.007999999999999:8.4802999999999997] [-2.8889999999999998:127.3] [-26.802:2.5962000000000001] [-20.395:2.9619] [-17.539000000000001:2.9363999999999999] [-4.0708000000000002:27.652999999999999] [-42.484000000000002:2.6375999999999999] [-9.6385000000000005:11.634] [-2.2235999999999998:105.09999999999999] [-2.3736999999999999:96.081000000000003] [0:1] [0:1] [0:1] [0:1] [0:1] [0:1] none none [0:1] [0:1] [-3:4] [-3:4] [-3:0.90000000000000002] [-3:0.90000000000000002] [-3:0.75] [-3:10] [1:3] none
+tree_sizes=1614 1975
+
+Tree=0
+num_leaves=18
+num_cat=0
+split_feature=48 85 24 101 10 102 57 46 2 77 65 50 28 42 15 71 27
+split_gain=0.579957 0.560588 0.319417 0.34404 0.345812 0.31816 0.264016 0.24308 0.238 0.382893 0.308354 0.20902 0.325662 0.193299 0.179203 0.157769 0.0880208
+threshold=0.55931500000000012 0.13493000000000002 2.7154000000000003 -1.2315499999999997 -2.0404999999999993 -0.71654499999999988 -0.30520999999999993 -1.6495999999999997 -1.0345499999999996 0.53864000000000012 -0.18702999999999997 0.4617750000000001 -0.89604499999999987 0.09696150000000002 1.1025500000000001 -1.2477499999999997 -2.7641499999999994
+decision_type=2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+left_child=1 5 3 14 -5 6 7 -1 -3 10 -10 12 -7 -6 -2 -8 -16
+right_child=2 8 -4 4 13 11 15 -9 9 -11 -12 -13 -14 -15 16 -17 -18
+leaf_value=0.53269322632612393 0.53285556396427136 0.53795820326439192 0.53965175149046007 0.52810289000352739 0.53726465477763363 0.52934157792657899 0.53686465492565183 0.52532715445850042 0.53164927022567454 0.5289673573519984 0.5392110834530156 0.53063965503824873 0.52126465462303406 0.53171920033919651 0.53595215502039839 0.53163230201804679 0.54001465473789723
+leaf_weight=21 22 31 31 34 30 26 25 24 26 37 28 32 24 33 24 34 30
+leaf_count=21 22 31 31 34 30 26 25 24 26 37 28 32 24 33 24 34 30
+internal_value=0.53291 0.531541 0.534978 0.53414 0.532167 0.529813 0.531649 0.528765 0.534174 0.532886 0.53557 0.527484 0.525465 0.53436 0.536659 0.533849 0.538209
+internal_weight=0 308 204 173 97 186 104 45 122 91 54 82 50 63 76 59 54
+internal_count=512 308 204 173 97 186 104 45 122 91 54 82 50 63 76 59 54
+is_linear=0
+shrinkage=1
+
+
+Tree=1
+num_leaves=21
+num_cat=0
+split_feature=47 85 101 102 82 60 77 71 6 5 104 56 105 98 34 105 1 81 77 6
+split_gain=0.532202 0.319004 0.370788 0.258003 0.526651 0.311849 0.282917 0.256601 0.25199 0.241505 0.233031 0.275747 0.194618 0.189193 0.183809 0.170631 0.213124 0.153242 0.0906731 0.066748
+threshold=-0.098166499999999976 -1.0275999999999998 -0.66247999999999985 2.0151500000000007 -1.5891999999999997 0.20005000000000003 0.7320000000000001 0.78581000000000012 1.9200500000000003 -0.057752499999999991 4.3586000000000009 -0.29904999999999993 0.51317500000000005 -0.21236999999999998 -1.4366499999999998 0.84812500000000013 -0.055928499999999999 0.056478500000000008 0.46610500000000005 0.30519000000000002
+decision_type=2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+left_child=1 2 14 4 5 -2 7 13 10 -8 11 12 -3 19 -1 16 -5 -13 -19 -6
+right_child=3 8 -4 15 6 -7 9 -9 -10 -11 -12 17 -14 -15 -16 -17 -18 18 -20 -21
+leaf_value=0.0015357224115480981 -0.00056573509310300538 -0.0051450178293245179 -0.0086605398481090865 -0.0014225528265039127 0.00028866534121334552 -0.0088703494891524317 0.00222323689609766 -0.00069499610612789794 -0.0055727448407560595 -0.0055469728447496893 -0.0045021013729274273 0.00021148034087989641 0.0014459973201155663 0.0072204624278805196 -0.0042527930811047552 0.0063610593712813152 0.0055660709924995905 0.0077199914027005438 0.0030158914270855134 0.004324714857197944
+leaf_weight=24 26 21 30 24 20 20 20 30 20 20 20 23 24 39 32 37 20 20 21 21
+leaf_count=24 26 21 30 24 20 20 20 30 20 20 20 23 24 39 32 37 20 20 21 21
+internal_value=0 -0.00175017 -0.00417498 0.0014848 0.000503825 -0.00417644 0.00193911 0.00324855 -0.000350609 -0.00166187 0.000459024 0.00136932 -0.00162981 0.00472738 -0.001772 0.00385851 0.00175409 0.00347809 0.00531057 0.00235591
+internal_weight=0 235 86 277 196 46 150 110 149 40 129 109 45 80 56 81 44 64 41 41
+internal_count=512 235 86 277 196 46 150 110 149 40 129 109 45 80 56 81 44 64 41 41
+is_linear=0
+shrinkage=0.05
+
+
+end of trees
+
+feature_importances:
+top_10%_loss_percentile5_percentile25_ratio=3
+all_correlation_stddev_best_ratio=2
+top_10%_correlation_stddev_best_ratio=2
+top_20%_correlation_percentile5_percentile25_ratio=2
+top_30%_correlation_percentile5_percentile25_ratio=2
+top_30%_correlation_skew=2
+top_30%_loss_best_percentile25_ratio=2
+all_correlation_best_percentile50_ratio=1
+all_correlation_best_percentile75_ratio=1
+all_correlation_skew=1
+all_loss_best_percentile75_ratio=1
+all_loss_stddev_median_ratio=1
+recent_10_correlation_stddev_median_ratio=1
+recent_10_loss_best_percentile75_ratio=1
+recent_10_loss_kurtosis=1
+recent_15%_correlation_best_percentile50_ratio=1
+recent_15%_loss_best_percentile50_ratio=1
+recent_15%_loss_skew=1
+recent_15%_loss_stddev_best_ratio=1
+recent_15%_loss_stddev_median_ratio=1
+recent_25_correlation_best_percentile50_ratio=1
+recent_25_correlation_stddev_median_ratio=1
+recent_25_loss_best_percentile25_ratio=1
+recent_25_loss_kurtosis=1
+top_10%_correlation_best_percentile25_ratio=1
+top_20%_correlation_best_percentile25_ratio=1
+top_20%_correlation_best_percentile50_ratio=1
+top_30%_correlation_best_percentile50_ratio=1
+top_30%_correlation_stddev_median_ratio=1
+
+parameters:
+[boosting: gbdt]
+[objective: regression]
+[metric: l2]
+[tree_learner: serial]
+[device_type: cpu]
+[data_sample_strategy: bagging]
+[data: ]
+[valid: ]
+[num_iterations: 100]
+[learning_rate: 0.05]
+[num_leaves: 31]
+[num_threads: 0]
+[seed: 0]
+[deterministic: 0]
+[force_col_wise: 0]
+[force_row_wise: 0]
+[histogram_pool_size: -1]
+[max_depth: -1]
+[min_data_in_leaf: 20]
+[min_sum_hessian_in_leaf: 0.001]
+[bagging_fraction: 1]
+[pos_bagging_fraction: 1]
+[neg_bagging_fraction: 1]
+[bagging_freq: 0]
+[bagging_seed: 3]
+[feature_fraction: 0.85]
+[feature_fraction_bynode: 1]
+[feature_fraction_seed: 2]
+[extra_trees: 0]
+[extra_seed: 6]
+[early_stopping_round: 5]
+[early_stopping_min_delta: 0]
+[first_metric_only: 0]
+[max_delta_step: 0]
+[lambda_l1: 0]
+[lambda_l2: 0]
+[linear_lambda: 0]
+[min_gain_to_split: 0]
+[drop_rate: 0.1]
+[max_drop: 50]
+[skip_drop: 0.5]
+[xgboost_dart_mode: 0]
+[uniform_drop: 0]
+[drop_seed: 4]
+[top_rate: 0.2]
+[other_rate: 0.1]
+[min_data_per_group: 100]
+[max_cat_threshold: 32]
+[cat_l2: 10]
+[cat_smooth: 10]
+[max_cat_to_onehot: 4]
+[top_k: 20]
+[monotone_constraints: ]
+[monotone_constraints_method: basic]
+[monotone_penalty: 0]
+[feature_contri: ]
+[forcedsplits_filename: ]
+[refit_decay_rate: 0.9]
+[cegb_tradeoff: 1]
+[cegb_penalty_split: 0]
+[cegb_penalty_feature_lazy: ]
+[cegb_penalty_feature_coupled: ]
+[path_smooth: 0]
+[interaction_constraints: ]
+[verbosity: -1]
+[saved_feature_importance_type: 0]
+[use_quantized_grad: 0]
+[num_grad_quant_bins: 4]
+[quant_train_renew_leaf: 0]
+[stochastic_rounding: 1]
+[linear_tree: 0]
+[max_bin: 255]
+[max_bin_by_feature: ]
+[min_data_in_bin: 3]
+[bin_construct_sample_cnt: 200000]
+[data_random_seed: 1]
+[is_enable_sparse: 1]
+[enable_bundle: 1]
+[use_missing: 1]
+[zero_as_missing: 0]
+[feature_pre_filter: 1]
+[pre_partition: 0]
+[two_round: 0]
+[header: 0]
+[label_column: ]
+[weight_column: ]
+[group_column: ]
+[ignore_column: ]
+[categorical_feature: ]
+[forcedbins_filename: ]
+[precise_float_parser: 0]
+[parser_config_file: ]
+[objective_seed: 5]
+[num_class: 1]
+[is_unbalance: 0]
+[scale_pos_weight: 1]
+[sigmoid: 1]
+[boost_from_average: 1]
+[reg_sqrt: 0]
+[alpha: 0.9]
+[fair_c: 1]
+[poisson_max_delta_step: 0.7]
+[tweedie_variance_power: 1.5]
+[lambdarank_truncation_level: 30]
+[lambdarank_norm: 1]
+[label_gain: ]
+[lambdarank_position_bias_regularization: 0]
+[eval_at: ]
+[multi_error_top_k: 1]
+[auc_mu_weights: ]
+[num_machines: 1]
+[local_listen_port: 12400]
+[time_out: 120]
+[machine_list_filename: ]
+[machines: ]
+[gpu_platform_id: -1]
+[gpu_device_id: -1]
+[gpu_use_dp: 0]
+[num_gpu: 1]
+
+end of parameters
+
+pandas_categorical:null
