@@ -24,6 +24,7 @@ from hypermax.execution import Execution
 from hypermax.hyperparameter import Hyperparameter
 from hypermax.results_analyzer import ResultsAnalyzer
 from hypermax.algorithms.atpe_optimizer import ATPEOptimizer
+from hypermax.algorithms.amotpe_optimizer import AMOTPEOptimizer
 from hypermax.algorithms.human_guided_optimizer_wrapper import HumanGuidedOptimizerWrapper
 from hypermax.algorithms.tpe_optimizer import TPEOptimizer
 from hypermax.algorithms.random_search_optimizer import RandomSearchOptimizer

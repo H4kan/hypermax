@@ -599,10 +599,10 @@ class AlgorithmSimulation:
                 #     "filtering": "cluster",
                 #     "clusters": hyperopt.hp.quniform("clustersQuantile", 0.4, 0.9, 0.1)
                 # },
-                {
-                    "filtering": "zscore",
-                    "zscore": hyperopt.hp.quniform("zscoreThreshold", -3.0, 3.0, 0.25)
-                }
+                # {
+                #     "filtering": "zscore",
+                #     "zscore": hyperopt.hp.quniform("zscoreThreshold", -3.0, 3.0, 0.25)
+                # }
             ])
         }
 
@@ -622,7 +622,7 @@ class AlgorithmSimulation:
             "resultFilteringAgeMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'age' else None,
             "resultFilteringLossRankMultiplier": params['resultFilteringMode']['multiplier'] if params['resultFilteringMode']['filtering'] == 'loss_rank' else None,
             # "clustersQuantile": params['resultFilteringMode']['clusters'] if params['resultFilteringMode']['filtering'] == 'cluster' else None,
-            "zscoreThreshold": params['resultFilteringMode']['zscore'] if params['resultFilteringMode']['filtering'] == 'zscore' else None,
+            # "zscoreThreshold": params['resultFilteringMode']['zscore'] if params['resultFilteringMode']['filtering'] == 'zscore' else None,
             # "secondaryCatCutoff": params['secondaryCatCutoff'],
             # "secondaryAnovaExponent": params['secondaryAnovaExponent'],
             # "secondaryAnovaMultiplier": params['secondaryProbabilityMode']['anovaMultiplier'] if params['secondaryProbabilityMode']['mode'] == 'correlation' else None,
@@ -830,8 +830,8 @@ class AlgorithmSimulation:
                     # print(labels)
                     selected_in_cluster = {i: False for i in range(int(n_clusters))}
 
-                if atpeParams['resultFilteringMode']['filtering'] == 'zscore':
-                    zscores = abs(zscore([result['loss'] for result in currentResults]))
+                # if atpeParams['resultFilteringMode']['filtering'] == 'zscore':
+                #     zscores = abs(zscore([result['loss'] for result in currentResults]))
 
                 # Now last step, we filter results prior to sending them into ATPE
                 for resultIndex, result in enumerate(currentResults):
@@ -861,11 +861,11 @@ class AlgorithmSimulation:
                         else:
                             removedResults.append(result)
 
-                    elif atpeParams['resultFilteringMode']['filtering'] == 'zscore':
-                        if (atpeParams['resultFilteringMode']['zscore'] < 0 and zscores[resultIndex] > abs(atpeParams['resultFilteringMode']['zscore'])) or (atpeParams['resultFilteringMode']['zscore'] > 0 and zscores[resultIndex] < 3 - atpeParams['resultFilteringMode']['zscore']):
-                            filteredResults.append(result)
-                        else:
-                            removedResults.append(result)
+                    # elif atpeParams['resultFilteringMode']['filtering'] == 'zscore':
+                    #     if (atpeParams['resultFilteringMode']['zscore'] < 0 and zscores[resultIndex] > abs(atpeParams['resultFilteringMode']['zscore'])) or (atpeParams['resultFilteringMode']['zscore'] > 0 and zscores[resultIndex] < 3 - atpeParams['resultFilteringMode']['zscore']):
+                    #         filteredResults.append(result)
+                    #     else:
+                    #         removedResults.append(result)
                     # elif atpeParams['resultFilteringMode']['filtering'] == 'zscore':
                     #     skewness = self.compute_skewness(result['loss'])
                     #     if abs(skewness) <= atpeParams['resultFilteringMode']['skewness']:

@@ -12,7 +12,7 @@ tpeOptimizer = TPEOptimizer()
 randomOptimizer = RandomSearchOptimizer()
 
 algorithms = {
-    "ATPE0": atpeOptimizer,
+    "ATPE11": atpeOptimizer,
     # "TPE": tpeOptimizer,
     # "Random": randomOptimizer
 }
@@ -26,8 +26,8 @@ algorithms = {
 # cb = hpobench.Camelback()
 # fo = hpobench.Forrester()
 # gp = hpobench.GoldsteinPrice()
-le = hpobench.Levy()
-rb = hpobench.Rosenbrock()
+# le = hpobench.Levy()
+# rb = hpobench.Rosenbrock()
 
 # logreg = svm_benchmark.SvmOnMnist()
 # logreg = logistic_regression.LogisticRegression()
@@ -55,7 +55,7 @@ fs[0] = ackley_function
 # Meta information for Ackley function
 infos[0] = {
     "name": "Ackley_Function",
-    "bounds": [[-32.768, 32.768]] * 3  # Ackley is usually benchmarked on a large range for each dimension
+    "bounds": [[-32.768, 32.768]] * 30  # Ackley is usually benchmarked on a large range for each dimension
 }
 
 def griewank_function(x):
@@ -69,7 +69,7 @@ fs[1] = griewank_function
 # Meta information for Griewank function
 infos[1] = {
     "name": "Griewank_Function",
-    "bounds": [[-600, 600]] * 3  # Griewank function's typical domain is [-600, 600] for each dimension
+    "bounds": [[-600, 600]] * 30  # Griewank function's typical domain is [-600, 600] for each dimension
 }
 
 def rastrigin_function(x):
@@ -83,7 +83,7 @@ fs[2] = rastrigin_function
 # Meta information for Rastrigin function
 infos[2] = {
     "name": "Rastrigin_Function",
-    "bounds": [[-5.12, 5.12]] * 3  # Rastrigin's typical domain is [-5.12, 5.12] for each dimension
+    "bounds": [[-5.12, 5.12]] * 30  # Rastrigin's typical domain is [-5.12, 5.12] for each dimension
 }
 
 def schwefel_function(x):
@@ -96,7 +96,7 @@ fs[3] = schwefel_function
 # Meta information for Schwefel function
 infos[3] = {
     "name": "Schwefel_Function",
-    "bounds": [[-500, 500]] * 3  # Schwefel's typical domain is [-500, 500] for each dimension
+    "bounds": [[-500, 500]] * 30  # Schwefel's typical domain is [-500, 500] for each dimension
 }
 
 def weierstrass_function(x, a=0.5, b=3, k_max=20):
@@ -111,7 +111,7 @@ fs[4] = weierstrass_function
 # Meta information for Weierstrass function
 infos[4] = {
     "name": "Weierstrass_Function",
-    "bounds": [[-0.5, 0.5]] * 3  # Weierstrass's typical domain is [-0.5, 0.5] for each dimension
+    "bounds": [[-0.5, 0.5]] * 30  # Weierstrass's typical domain is [-0.5, 0.5] for each dimension
 }
 
 def sphere_function(x):
@@ -123,7 +123,7 @@ fs[5] = sphere_function
 # Meta information for Sphere function
 infos[5] = {
     "name": "Sphere_Function",
-    "bounds": [[-5.12, 5.12]] * 3  # Sphere function's typical domain is [-5.12, 5.12] for each dimension
+    "bounds": [[-5.12, 5.12]] * 30  # Sphere function's typical domain is [-5.12, 5.12] for each dimension
 }
 
 def elliptic_function(x):
@@ -136,7 +136,7 @@ fs[6] = elliptic_function
 # Meta information for Elliptic function
 infos[6] = {
     "name": "Elliptic_Function",
-    "bounds": [[-5.12, 5.12]] * 3  # Elliptic function's typical domain is [-5.12, 5.12] for each dimension
+    "bounds": [[-5.12, 5.12]] * 30  # Elliptic function's typical domain is [-5.12, 5.12] for each dimension
 }
 
 
